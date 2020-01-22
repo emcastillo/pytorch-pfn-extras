@@ -9,5 +9,8 @@ setuptools.setup(
     extras_require={'test': ['pytest']},
     packages=[
         'pytorch_extensions',
+        'pytorch_extensions.training',
+        'pytorch_extensions.training.extensions',
+        'pytorch_extensions.training.triggers',
     ],
 )
