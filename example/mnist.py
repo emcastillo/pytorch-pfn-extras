@@ -36,7 +36,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     epoch_size = len(train_loader)
     for batch_idx, (data, target) in enumerate(train_loader):
-        current_it = (epoch-1)*epoch_size+batch_idx
+        current_it = epoch * epoch_size + batch_idx
         with manager.run_iteration(
                 epoch=epoch, iteration=current_it, epoch_size=epoch_size):
             data, target = data.to(device), target.to(device)
@@ -138,7 +138,7 @@ def main():
     if args.snapshot is not None:
         state = torch.load(args.snapshot)
         manager.load_state_dict(state)
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(0, args.epochs):
         train(args, model, device, train_loader, optimizer, epoch)
         # Test function is called from the evaluator extension
         # to get access to the reporter and other facilities

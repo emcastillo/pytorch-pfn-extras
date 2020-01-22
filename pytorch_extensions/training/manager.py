@@ -23,7 +23,7 @@ class FoolUpdater(object):
     def __init__(self, epoch, iteration, epoch_size):
         self._epoch = epoch
         self._iteration = iteration
-        self._epoch_size = epoch_size-1
+        self._epoch_size = epoch_size
 
     @property
     def epoch(self):
@@ -35,7 +35,7 @@ class FoolUpdater(object):
 
     @property
     def epoch_detail(self):
-        return self._iteration/self._epoch_size
+        return self._iteration / self._epoch_size
 
 
 class ExtensionsManager(object):
