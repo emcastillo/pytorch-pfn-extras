@@ -129,7 +129,7 @@ num_retain=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~chainer.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_extensions.training.extensions.snapshot_writers.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case trainer
@@ -147,7 +147,7 @@ num_retain=-1, autoload=False)
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     return snapshot(target=target, filename=filename, savefun=savefun,
@@ -183,7 +183,7 @@ num_retain=-1, autoload=False)
     Args:
         savefun: Function to save the trainer. It takes two arguments: the
             output file path and the trainer object.
-            It is :meth:`chainer.serializers.save_npz` by default.
+            It is :meth:`torch.save` by default.
             If ``writer`` is specified, this argument must be ``None``.
         filename (str): Name of the file into which the trainer is serialized.
             It can be a format string, where the trainer object is passed to
@@ -200,7 +200,7 @@ num_retain=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~chainer.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_extensions.training.extensions.snapshot_writers.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case trainer
@@ -213,7 +213,7 @@ num_retain=-1, autoload=False)
             automatically finds the latest snapshot and loads the data
             to the target.  Automatic loading only works when the
             filename is a string. It is assumed that snapshots are generated
-            by :func:`chainer.serializers.save_npz` .
+            by :func:`torch.save` .
 
     Returns:
         Snapshot extension object.
@@ -221,49 +221,50 @@ num_retain=-1, autoload=False)
     .. testcode::
        :hide:
 
-       from chainer import training
-       class Model(chainer.Link):
+       from pytorch_extensions import training
+       class Model(torch.nn.Module):
            def __call__(self, x):
                return x
-       train_iter = chainer.iterators.SerialIterator([], 1)
-       optimizer = optimizers.SGD().setup(Model())
-       updater = training.updaters.StandardUpdater(
-           train_iter, optimizer, device=0)
-       trainer = training.Trainer(updater)
+
+       model = Model()
+       models = {'main': model}
+       manager = training.ExtensionsManager(models, {}, 1, [])
 
     .. admonition:: Using asynchronous writers
 
         By specifying ``writer`` argument, writing operations can be made
         asynchronous, hiding I/O overhead of snapshots.
 
-        >>> from chainer.training import extensions
+        >>> from pytorch_extensions.training import extensions
         >>> writer = extensions.snapshot_writers.ProcessWriter()
-        >>> trainer.extend(extensions.snapshot(writer=writer), \
+        >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
-        To change the format, such as npz or hdf5, you can pass a saving
+        To change the format, you can pass a saving
         function as ``savefun`` argument of the writer.
 
-        >>> from chainer.training import extensions
-        >>> from chainer import serializers
+        >>> from pytorch_extensions.training import extensions
         >>> writer = extensions.snapshot_writers.ProcessWriter(
-        ...     savefun=serializers.save_npz)
-        >>> trainer.extend(extensions.snapshot(writer=writer), \
+        ...     savefun=torch.save)
+        >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
     This is the list of built-in snapshot writers.
 
-        - :class:`chainer.training.extensions.snapshot_writers.SimpleWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.ThreadWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.ProcessWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.\
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+SimpleWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+ThreadWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+ProcessWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
 ThreadQueueWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.\
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
 ProcessQueueWriter`
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot_object`
+        - :meth:`pytorch_extensions.training.extensions.snapshot_object`
     """
     target, condition, writer, snapshot_on_error, num_retain,\
         autoload = argument.parse_kwargs(

@@ -13,13 +13,13 @@ class Writer(object):
 
     """Base class of snapshot writers.
 
-    :class:`~chainer.training.extensions.Snapshot` invokes ``__call__`` of this
-    class every time when taking a snapshot.
+    :class:`~pytorch_extensions.training.extensions.Snapshot`
+    invokes ``__call__`` of this class every time when taking a snapshot.
     This class determines how the actual saving function will be invoked.
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self):
@@ -29,15 +29,16 @@ class Writer(object):
         """Invokes the actual snapshot function.
 
         This method is invoked by a
-        :class:`~chainer.training.extensions.Snapshot` object every time it
-        takes a snapshot.
+        :class:`~pytorch_extensions.training.extensions.Snapshot` object
+        every time it takes a snapshot.
 
         Args:
             filename (str): Name of the file into which the serialized target
                 is saved. It is a concrete file name, i.e. not a pre-formatted
                 template string.
             outdir (str): Output directory. Corresponds to
-                :py:attr:`Trainer.out <chainer.training.Trainer.out>`.
+                :py:attr:`ExtensionsManager.out
+                 <pytorch_extensions.training.ExtensionsManager.out>`.
             target (dict): Serialized object which will be saved.
         """
         raise NotImplementedError
@@ -46,10 +47,10 @@ class Writer(object):
         self.finalize()
 
     def finalize(self):
-        """Finalizes the wirter.
+        """Finalizes the writer.
 
-        Like extensions in :class:`~chainer.training.Trainer`, this method
-        is invoked at the end of the training.
+        this method is invoked at the end of the training in
+        :class:`~pytorch_extensions.training.ExtensionsManager`,
 
         """
         pass
@@ -94,7 +95,7 @@ class SimpleWriter(Writer):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self, savefun=torch.save, **kwds):
@@ -120,7 +121,7 @@ class StandardWriter(Writer):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     _started = False
@@ -175,7 +176,7 @@ class ThreadWriter(StandardWriter):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self, savefun=torch.save, **kwds):
@@ -200,7 +201,7 @@ class ProcessWriter(StandardWriter):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self, savefun=torch.save, **kwds):
@@ -230,7 +231,7 @@ class QueueWriter(Writer):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     _started = False
@@ -292,7 +293,7 @@ class ThreadQueueWriter(QueueWriter):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self, savefun=torch.save, task=None):
@@ -319,7 +320,7 @@ class ProcessQueueWriter(QueueWriter):
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     def __init__(self, savefun=torch.save, task=None):
