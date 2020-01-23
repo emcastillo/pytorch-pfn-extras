@@ -20,10 +20,14 @@ except AttributeError:
 
 
 class FoolUpdater(object):
-    def __init__(self, epoch, iteration, epoch_size):
-        self.epoch = epoch
+
+    def __init__(self, iteration, epoch_size):
         self.iteration = iteration
         self.epoch_size = epoch_size
+
+    @property
+    def epoch(self):
+        return self.iteration // self.epoch_size
 
     @property
     def epoch_detail(self):
@@ -57,9 +61,8 @@ class ExtensionsManager(object):
         self._models = models
         self._optimizers = optimizers
         self.max_epochs = max_epochs
-        self._start_epoch = 0
         self._start_iteration = 0
-        self.updater = FoolUpdater(0, 0, 0)
+        self.updater = FoolUpdater(0, 0)
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()
@@ -182,18 +185,16 @@ class ExtensionsManager(object):
         else:
             raise ValueError('extension %s not found' % name)
 
-    def run_extensions(self, epoch, iteration, epoch_size):
+    def run_extensions(self):
         for name, entry in self.extensions:
             if entry.trigger(self):
                 entry.extension(self)
 
     @contextlib.contextmanager
     def run_iteration(self, **kwargs):
-        epoch = kwargs.pop('epoch') + self._start_epoch
         iteration = kwargs.pop('iteration') + self._start_iteration
         epoch_size = kwargs.pop('epoch_size')
         # To fool the extensions to believe there is an updater
-        self.updater.epoch = epoch
         self.updater.iteration = iteration
         self.updater.epoch_size = epoch_size
         if self._start_time is None:
@@ -204,15 +205,17 @@ class ExtensionsManager(object):
             try:
                 yield
             finally:
-                self.run_extensions(epoch, iteration, epoch_size)
+                # In chainer, the iteration count was increased
+                # just before calling the extensions, we need
+                # to keep the semantics
+                self.updater.iteration += 1
+                self.run_extensions()
 
     def state_dict(self):
         to_save = {}
         if self.updater is not None:
-            to_save['_start_epoch'] = self.updater.epoch
             to_save['_start_iteration'] = self.updater.iteration
         else:
-            to_save['_start_epoch'] = 0
             to_save['_start_iteration'] = 0
         # Save manager status ?
         to_save['models'] = {name: self._models[name].state_dict()
@@ -224,7 +227,6 @@ class ExtensionsManager(object):
         return to_save
 
     def load_state_dict(self, to_load):
-        self._start_epoch = to_load['state']['epoch']
         self._start_iteration = to_load['state']['iteration']
         for name in self._models:
             self._models[name].load_state_dict(to_load['models'][name])
@@ -261,25 +263,19 @@ class IgniteExtensionsManager(ExtensionsManager):
 
         @self.engine.on(Events.STARTED)
         def set_training_started(engine):
-            self.engine.state.iteration = self._start_epoch
             self.engine.state.iteration = self._start_iteration
             self._start_time = _get_time()
             epoch_size = len(self.engine.state.dataloader)
-            self.updater = FoolUpdater(self.engine.state.epoch,
-                                       self.engine.state.iteration,
+            self.updater = FoolUpdater(self.engine.state.iteration,
                                        epoch_size)
             self.start_extensions()
             # Make all the next
             # handlers to be executed after user defined ones
             @self.engine.on(Events.ITERATION_COMPLETED)
             def run_extensions_on_iter(engine):
-                self.updater = FoolUpdater(self.engine.state.epoch,
-                                           self.engine.state.iteration,
+                self.updater = FoolUpdater(self.engine.state.iteration,
                                            epoch_size)
-                self.run_extensions(
-                    self.engine.state.epoch,
-                    self.engine.state.iteration,
-                    epoch_size)
+                self.run_extensions()
 
             # This should be the last extension to be run
             @self.engine.on(Events.ITERATION_COMPLETED)
