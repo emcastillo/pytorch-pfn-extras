@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
-import sys
-sys.path.append(".")
+
 from torch import nn
 from torch.optim import SGD
 from torch.utils.data import DataLoader
