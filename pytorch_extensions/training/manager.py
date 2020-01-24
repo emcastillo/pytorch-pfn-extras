@@ -27,7 +27,7 @@ class FoolUpdater(object):
 
     @property
     def epoch_detail(self):
-        return self._iteration / self._epoch_size
+        return self.iteration / self.epoch_size
 
 
 class ExtensionsManager(object):
