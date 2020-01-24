@@ -1,4 +1,4 @@
-import pytorch_extensions as pe
+import pytorch_extensions as pte
 
 
 class DummyTrainer:
@@ -8,7 +8,7 @@ class DummyTrainer:
 
 
 def test_call():
-    trigger = pe.training.triggers.TimeTrigger(1)
+    trigger = pte.training.triggers.TimeTrigger(1)
     trainer = DummyTrainer()
 
     assert not trigger(trainer)
