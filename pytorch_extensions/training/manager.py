@@ -21,17 +21,9 @@ except AttributeError:
 
 class FoolUpdater(object):
     def __init__(self, epoch, iteration, epoch_size):
-        self._epoch = epoch
-        self._iteration = iteration
-        self._epoch_size = epoch_size
-
-    @property
-    def epoch(self):
-        return self._epoch
-
-    @property
-    def iteration(self):
-        return self._iteration
+        self.epoch = epoch
+        self.iteration = iteration
+        self.epoch_size = epoch_size
 
     @property
     def epoch_detail(self):
@@ -67,6 +59,7 @@ class ExtensionsManager(object):
         self.max_epochs = max_epochs
         self._start_epoch = 0
         self._start_iteration = 0
+        self.updater = FoolUpdater(0, 0, 0)
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()
@@ -200,7 +193,9 @@ class ExtensionsManager(object):
         iteration = kwargs.pop('iteration') + self._start_iteration
         epoch_size = kwargs.pop('epoch_size')
         # To fool the extensions to believe there is an updater
-        self.updater = FoolUpdater(epoch, iteration, epoch_size)
+        self.updater.epoch = epoch
+        self.updater.iteration = iteration
+        self.updater.epoch_size = epoch_size
         if self._start_time is None:
             self._start_time = _get_time()
             self.start_extensions()
