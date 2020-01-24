@@ -13,9 +13,12 @@ from pytorch_extensions.training import trigger as trigger_module
 
 _available = None
 
+
 def percentile(a, q, axis):
     # fallback to numpy
-    return numpy.percentile(a.cpu().numpy(), q, axis)
+    return torch.Tensor(
+        numpy.percentile(a.cpu().numpy(), q, axis))
+
 
 def _try_import_matplotlib():
     global matplotlib, _available
@@ -266,12 +269,14 @@ grid=True)
                     xs.append(x.flatten())
             if xs:
                 stat_dict = self._statistician(
-                    torch.cat(xs,dim=0), axis=0)
+                    torch.cat(xs, dim=0), axis=0)
                 stat_list = []
                 if self._plot_mean:
-                    stat_list.append(numpy.atleast_1d(stat_dict['mean'].cpu().numpy()))
+                    stat_list.append(
+                        numpy.atleast_1d(stat_dict['mean'].cpu().numpy()))
                 if self._plot_std:
-                    stat_list.append(numpy.atleast_1d(stat_dict['std'].cpu().numpy()))
+                    stat_list.append(
+                        numpy.atleast_1d(stat_dict['std'].cpu().numpy()))
                 if self._plot_percentile:
                     stat_list.append(numpy.atleast_1d(stat_dict['percentile']))
                 stats[i] = numpy.concatenate(stat_list, axis=0)
