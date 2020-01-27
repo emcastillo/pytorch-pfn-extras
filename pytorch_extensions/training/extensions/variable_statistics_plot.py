@@ -20,7 +20,6 @@ def percentile(a, q, axis):
         numpy.percentile(a.cpu().numpy(), q, axis))
 
 
-
 def _try_import_matplotlib():
     global matplotlib, _available
     global _plot_color, _plot_color_trans, _plot_common_kwargs
