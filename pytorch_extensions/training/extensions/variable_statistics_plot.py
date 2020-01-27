@@ -268,8 +268,7 @@ grid=True)
                 if x is not None:
                     xs.append(x.flatten())
             if xs:
-                stat_dict = self._statistician(
-                    torch.cat(xs, dim=0), axis=0)
+                stat_dict = self._statistician(torch.cat(xs, dim=0), axis=0)
                 stat_list = []
                 if self._plot_mean:
                     stat_list.append(
@@ -278,7 +277,8 @@ grid=True)
                     stat_list.append(
                         numpy.atleast_1d(stat_dict['std'].cpu().numpy()))
                 if self._plot_percentile:
-                    stat_list.append(numpy.atleast_1d(stat_dict['percentile']))
+                    stat_list.append(
+                        numpy.atleast_1d(stat_dict['percentile']))
                 stats[i] = numpy.concatenate(stat_list, axis=0)
 
         self._samples.add(stats, idx=trainer.updater.iteration)

@@ -3,7 +3,8 @@ import sys
 from copy import deepcopy
 
 from pytorch_extensions.training import extension
-from pytorch_extensions.training.extensions import log_report as log_report_module
+from pytorch_extensions.training.extensions import log_report \
+    as log_report_module
 from pytorch_extensions.training.extensions import util
 
 

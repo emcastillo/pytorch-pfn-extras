@@ -71,7 +71,8 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
-    parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
+    parser.add_argument('--test-batch-size', type=int, default=1000,
+                        metavar='N',
                         help='input batch size for testing (default: 1000)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
@@ -110,30 +111,36 @@ def main():
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
     model = Net().to(device)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    optimizer = optim.SGD(
+        model.parameters(), lr=args.lr, momentum=args.momentum)
 
     global manager
     # manager.extend(...) also works
     writer = extensions.snapshot_writers.SimpleWriter()
-    my_extensions = [extensions.LogReport(),
-                     extensions.ProgressBar(),
-                     extensions.ExponentialShift('lr', 0.9999, optimizer, init=0.2, target=0.1),
-                     extensions.observe_lr(optimizer=optimizer),
-                     extensions.ParameterStatistics(model, prefix='model'),
-                     extensions.VariableStatisticsPlot(model),
-                     extensions.Evaluator(
-                         test_loader, model,
-                         eval_func=lambda data, target: test(args, model, device, data, target),
-                         progress_bar=True),
-                     extensions.PlotReport(
-                         ['train/loss', 'val/loss'], 'epoch', filename='loss.png'),
-                     extensions.PrintReport(['epoch', 'iteration',
-                                             'train/loss', 'lr', 'model/fc2.bias/grad/min',
-                                             'val/loss', 'val/acc']),
-                     extensions.snapshot(writer=writer)]
+    my_extensions = [
+        extensions.LogReport(),
+        extensions.ProgressBar(),
+        extensions.ExponentialShift(
+            'lr', 0.9999, optimizer, init=0.2, target=0.1),
+        extensions.observe_lr(optimizer=optimizer),
+        extensions.ParameterStatistics(model, prefix='model'),
+        extensions.VariableStatisticsPlot(model),
+        extensions.Evaluator(
+            test_loader, model,
+            eval_func=lambda data, target:
+                test(args, model, device, data, target),
+            progress_bar=True),
+        extensions.PlotReport(
+            ['train/loss', 'val/loss'], 'epoch', filename='loss.png'),
+        extensions.PrintReport(['epoch', 'iteration',
+                                'train/loss', 'lr', 'model/fc2.bias/grad/min',
+                                'val/loss', 'val/acc']),
+        extensions.snapshot(writer=writer),
+    ]
     models = {'main': model}
     optimizers = {'main': optimizer}
-    manager = pte.training.ExtensionsManager(models, optimizers, args.epochs, my_extensions)
+    manager = pte.training.ExtensionsManager(
+        models, optimizers, args.epochs, my_extensions)
     # Lets load the snapshot
     if args.snapshot is not None:
         state = torch.load(args.snapshot)
