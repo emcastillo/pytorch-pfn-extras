@@ -16,7 +16,9 @@ _available = None
 
 def percentile(a, q, axis):
     # fallback to numpy
-    return numpy.percentile(a.cpu().numpy(), q, axis)
+    return torch.Tensor(
+        numpy.percentile(a.cpu().numpy(), q, axis))
+
 
 
 def _try_import_matplotlib():
