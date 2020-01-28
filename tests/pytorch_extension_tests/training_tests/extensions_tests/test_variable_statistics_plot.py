@@ -37,8 +37,7 @@ def test_run_and_save_plot(matplotlib):
     try:
         for i in range(iterations):
             cur_it = 1+i
-            with manager.run_iteration(
-                    epoch=1, iteration=cur_it, epoch_size=2):
+            with manager.run_iteration(iteration=cur_it, epoch_size=2):
                 pass
     finally:
         os.remove(os.path.join(manager.out, filename))
