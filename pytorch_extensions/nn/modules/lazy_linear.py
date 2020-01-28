@@ -34,5 +34,4 @@ class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
         # Defer initialization of parameters until shape of the parameter
         # is determiend.
         if self.lazy_parmeters_determined:
-            print('init')
             super(LazyLinear, self).reset_parameters()
