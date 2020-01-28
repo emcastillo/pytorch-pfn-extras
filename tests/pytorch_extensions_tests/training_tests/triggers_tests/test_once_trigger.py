@@ -1,149 +1,56 @@
-from __future__ import division
-
 import random
-import tempfile
-import unittest
+import pytest
 
-import numpy as np
-
-from chainer import serializers
-from chainer import testing
-from chainer.testing import condition
-from chainer import training
+import pytorch_extensions as pte
 
 
-@testing.parameterize(
-    # basic
-    {
-        'iter_per_epoch': 5, 'call_on_resume': False, 'resume': 4},
-    # call on resume
-    {
-        'iter_per_epoch': 5, 'call_on_resume': True, 'resume': 4},
-    # unaligned epoch
-    {
-        'iter_per_epoch': 2.5, 'call_on_resume': False, 'resume': 3},
-    # unaligned epoch, call on resume
-    {
-        'iter_per_epoch': 2.5, 'call_on_resume': True, 'resume': 3},
-    # tiny epoch
-    {
-        'iter_per_epoch': 0.5, 'call_on_resume': False, 'resume': 4},
-    # tiny epoch, call on resume
-    {
-        'iter_per_epoch': 0.5, 'call_on_resume': True, 'resume': 4},
-)
-class TestOnceTrigger(unittest.TestCase):
+_parametrize = pytest.mark.parametrize(
+    'iter_per_epoch,call_on_resume',
+    [
+        # basic
+        (5, False),
+        # call on resume
+        (5, True),
+        # unaligned epoch
+        (2.5, False),
+        # unaligned epoch, call on resume
+        (2.5, True),
+        # tiny epoch
+        (0.5, False),
+        # tiny epoch, call on resume
+        (0.5, True),
+    ])
 
+
+@_parametrize
+def test_trigger(iter_per_epoch, call_on_resume):
     expected = [True] + [False] * 6
     finished = [False] + [True] * 6
+    manager = pte.training.ExtensionsManager({}, [], 100, [])
+    trigger = pte.training.triggers.OnceTrigger(call_on_resume)
+    for it, (e, f) in enumerate(zip(expected, finished)):
+        assert trigger.finished == f
+        assert trigger(manager) == e
+        with manager.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+            pass
 
-    def setUp(self):
-        self.resumed_expected = [True] + [False] * 6
-        self.resumed_finished = [False] + [True] * 6
-        if self.call_on_resume:
-            self.resumed_expected[self.resume] = True
-            self.resumed_finished[self.resume] = False
 
-    def test_trigger(self):
-        trainer = testing.get_trainer_with_mock_updater(
-            stop_trigger=None, iter_per_epoch=self.iter_per_epoch)
-        trigger = training.triggers.OnceTrigger(self.call_on_resume)
-        for expected, finished in zip(self.expected, self.finished):
-            self.assertEqual(trigger.finished, finished)
-            self.assertEqual(trigger(trainer), expected)
-            trainer.updater.update()
-
-    def test_resumed_trigger(self):
-        trainer = testing.get_trainer_with_mock_updater(
-            stop_trigger=None, iter_per_epoch=self.iter_per_epoch)
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            for expected, finished in zip(self.resumed_expected[:self.resume],
-                                          self.resumed_finished[:self.resume]):
-                trainer.updater.update()
-                self.assertEqual(trigger.finished, finished)
-                self.assertEqual(trigger(trainer), expected)
-            serializers.save_npz(f.name, trigger)
-
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            serializers.load_npz(f.name, trigger)
-            for expected, finished in zip(self.resumed_expected[self.resume:],
-                                          self.resumed_finished[self.resume:]):
-                trainer.updater.update()
-                self.assertEqual(trigger.finished, finished)
-                self.assertEqual(trigger(trainer), expected)
-
-    @condition.repeat(10)
-    def test_trigger_sparse_call(self):
-        trainer = testing.get_trainer_with_mock_updater(
-            stop_trigger=None, iter_per_epoch=self.iter_per_epoch)
-        trigger = training.triggers.OnceTrigger(self.call_on_resume)
+@_parametrize
+def test_trigger_sparse_call(iter_per_epoch, call_on_resume):
+    expected = [True] + [False] * 6
+    finished = [False] + [True] * 6
+    for _ in range(10):
+        manager = pte.training.ExtensionsManager({}, [], 100, [])
+        trigger = pte.training.triggers.OnceTrigger(call_on_resume)
         accumulated = False
         accumulated_finished = True
-        for expected, finished in zip(self.expected, self.finished):
-            accumulated = accumulated or expected
-            accumulated_finished = accumulated_finished and finished
-            if random.randrange(2):
-                self.assertEqual(trigger.finished, accumulated_finished)
-                self.assertEqual(trigger(trainer), accumulated)
-                accumulated = False
-                accumulated_finished = True
-            trainer.updater.update()
-
-    @condition.repeat(10)
-    def test_resumed_trigger_sparse_call(self):
-        trainer = testing.get_trainer_with_mock_updater(
-            stop_trigger=None, iter_per_epoch=self.iter_per_epoch)
-        accumulated = False
-        accumulated_finished = True
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            for expected, finished in zip(self.resumed_expected[:self.resume],
-                                          self.resumed_finished[:self.resume]):
-                trainer.updater.update()
-                accumulated = accumulated or expected
-                accumulated_finished = accumulated_finished and finished
+        for it, (e, f) in enumerate(zip(expected, finished)):
+            with manager.run_iteration(
+                    iteration=it, epoch_size=iter_per_epoch):
+                accumulated = accumulated or e
+                accumulated_finished = accumulated_finished and f
                 if random.randrange(2):
-                    self.assertEqual(trigger.finished, accumulated_finished)
-                    self.assertEqual(trigger(trainer), accumulated)
+                    assert trigger.finished == accumulated_finished
+                    assert trigger(manager) == accumulated
                     accumulated = False
                     accumulated_finished = True
-            serializers.save_npz(f.name, trigger)
-
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            serializers.load_npz(f.name, trigger)
-            for expected, finished in zip(self.resumed_expected[self.resume:],
-                                          self.resumed_finished[self.resume:]):
-                trainer.updater.update()
-                accumulated = accumulated or expected
-                accumulated_finished = accumulated_finished and finished
-                if random.randrange(2):
-                    self.assertEqual(trigger.finished, accumulated_finished)
-                    self.assertEqual(trigger(trainer), accumulated)
-                    accumulated = False
-                    accumulated_finished = True
-
-    def test_resumed_trigger_backward_compat(self):
-        trainer = testing.get_trainer_with_mock_updater(
-            stop_trigger=None, iter_per_epoch=self.iter_per_epoch)
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            for expected, finished in zip(self.resumed_expected[:self.resume],
-                                          self.resumed_finished[:self.resume]):
-                trainer.updater.update()
-                self.assertEqual(trigger.finished, finished)
-                self.assertEqual(trigger(trainer), expected)
-            # old version does not save anything
-            np.savez(f, dummy=0)
-
-            trigger = training.triggers.OnceTrigger(self.call_on_resume)
-            with testing.assert_warns(UserWarning):
-                serializers.load_npz(f.name, trigger)
-            for expected, finished in zip(self.resumed_expected[self.resume:],
-                                          self.resumed_finished[self.resume:]):
-                trainer.updater.update()
-                self.assertEqual(trigger.finished, finished)
-                self.assertEqual(trigger(trainer), expected)
-
-
-testing.run_module(__name__, __file__)
