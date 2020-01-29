@@ -3,7 +3,7 @@ from torch import nn
 
 from pytorch_extensions.nn import LazyLinear
 
-from tests.pytorch_extensions_test.nn_test.modules_test.test_lazy import \
+from tests.pytorch_extensions_tests.nn_tests.modules_tests.test_lazy import \
     LazyTestBase
 
 
