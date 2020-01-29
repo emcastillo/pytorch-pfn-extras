@@ -31,9 +31,8 @@ def test_trigger(iter_per_epoch, interval, expected):
 
     # before the first iteration, trigger should be False
     for iteration, e in enumerate([False] + expected):
-        epoch = iteration // iter_per_epoch
         with trainer.run_iteration(
-                epoch=epoch, iteration=iteration, epoch_size=iter_per_epoch):
+                iteration=iteration, epoch_size=iter_per_epoch):
             assert trigger(trainer) == e
 
 

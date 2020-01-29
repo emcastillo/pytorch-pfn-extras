@@ -213,11 +213,9 @@ class ExtensionsManager(object):
                 entry.extension(self)
 
     @contextlib.contextmanager
-    def run_iteration(self, **kwargs):
-        iteration = kwargs.pop('iteration') + self._start_iteration
-        epoch_size = kwargs.pop('epoch_size')
+    def run_iteration(self, *, iteration, epoch_size):
         # To fool the extensions to believe there is an updater
-        self.updater.iteration = iteration
+        self.updater.iteration = iteration + self._start_iteration
         self.updater.epoch_size = epoch_size
         if self._start_time is None:
             self._start_time = _get_time()
