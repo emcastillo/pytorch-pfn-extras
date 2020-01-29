@@ -46,7 +46,7 @@ def test_make_extension():
         pass
 
     @pte.training.make_extension(trigger=(2, 'epoch'), default_name='my_ext',
-                                priority=50, initializer=initialize)
+                                 priority=50, initializer=initialize)
     def my_extension(trainer):
         pass
 
