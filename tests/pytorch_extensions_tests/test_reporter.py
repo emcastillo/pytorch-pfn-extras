@@ -211,6 +211,9 @@ def test_summary_weight():
     numpy.testing.assert_allclose(mean.numpy(), val)
 
 
+# TODO(niboshi): Add serialization tests
+
+
 # pte.DictSummary
 
 def _check_dict_summary(summary, data):
@@ -278,3 +281,6 @@ def test_dict_summary_weight():
     var = torch.autograd.Variable(torch.Tensor(numpy.array([0.5])))
     with pytest.raises(ValueError):
         summary.add({'a': (4., var)})
+
+
+# TODO(niboshi): Add serialization tests
