@@ -244,6 +244,7 @@ class _BaseExtensionsManager:
         if self.updater is not None:
             self.updater.iteration = self._start_iteration
         for name in self._models:
+            # TODO(ecastill) map_loc when loading the model and DDP check
             self._models[name].load_state_dict(to_load['models'][name])
 
         for name in self._optimizers:
