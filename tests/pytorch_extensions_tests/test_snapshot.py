@@ -9,12 +9,17 @@ import unittest
 import mock
 import pytest
 
-from chainer import testing
-from chainer import training
-from chainer.training import extensions
-from chainer.training.extensions._snapshot import _find_latest_snapshot
-from chainer.training.extensions._snapshot import _find_snapshot_files
-from chainer.training.extensions._snapshot import _find_stale_snapshots
+from pytorch_extensions import training
+from pytorch_extensions.training import extensions
+from pytorch_extensions.training.extensions._snapshot import _find_latest_snapshot
+from pytorch_extensions.training.extensions._snapshot import _find_snapshot_files
+from pytorch_extensions.training.extensions._snapshot import _find_stale_snapshots
+
+
+def get_trainer_with_mock_updater():
+    optimizers = {'main': mock.MagicMock()}
+    epochs = 10  # FIXME
+    return training.ExtensionsManager({}, optimizers, epochs, [])
 
 
 class TestSnapshot(unittest.TestCase):
@@ -47,7 +52,7 @@ class TestSnapshot(unittest.TestCase):
 class TestSnapshotSaveFile(unittest.TestCase):
 
     def setUp(self):
-        self.trainer = testing.get_trainer_with_mock_updater()
+        self.trainer = get_trainer_with_mock_updater()
         self.trainer.out = '.'
         self.trainer._done = True
 
@@ -75,7 +80,7 @@ class TestSnapshotSaveFile(unittest.TestCase):
 class TestSnapshotOnError(unittest.TestCase):
 
     def setUp(self):
-        self.trainer = testing.get_trainer_with_mock_updater()
+        self.trainer = get_trainer_with_mock_updater()
         self.trainer.out = '.'
         self.filename = 'myfile-deadbeef.dat'
 
@@ -105,10 +110,10 @@ class TestSnapshotOnError(unittest.TestCase):
         self.assertTrue(os.path.exists(self.filename))
 
 
-@testing.parameterize(*testing.product({'fmt':
+@pytest.mark.parametrize('fmt',
                                         ['snapshot_iter_{}',
                                          'snapshot_iter_{}.npz',
-                                         '{}_snapshot_man_suffix.npz']}))
+                                         '{}_snapshot_man_suffix.npz'])
 class TestFindSnapshot(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
@@ -155,11 +160,11 @@ class TestFindSnapshot(unittest.TestCase):
                                                             self.path)
 
 
-@testing.parameterize(*testing.product({'fmt':
+@pytest.mark.parametrize('fmt',
                                         ['snapshot_iter_{}_{}',
                                          'snapshot_iter_{}_{}.npz',
                                          '{}_snapshot_man_{}-suffix.npz',
-                                         'snapshot_iter_{}.{}']}))
+                                         'snapshot_iter_{}.{}'])
 class TestFindSnapshot2(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
@@ -188,9 +193,9 @@ class TestFindSnapshot2(unittest.TestCase):
         assert expected == snapshot_files
 
 
-@testing.parameterize(*testing.product({'length_retain':
+@pytest.mark.parametrize('length_retain',
                                         [(100, 30), (10, 30), (1, 1000),
-                                         (1000, 1), (1, 1), (1, 3), (2, 3)]}))
+                                         (1000, 1), (1, 1), (1, 3), (2, 3)])
 class TestFindStaleSnapshot(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
@@ -231,7 +236,7 @@ class TestRemoveStaleSnapshots(unittest.TestCase):
         snapshot = extensions.snapshot(filename=fmt, n_retains=retain,
                                        autoload=False)
 
-        trainer = testing.get_trainer_with_mock_updater()
+        trainer = get_trainer_with_mock_updater()
         trainer.out = self.path
         trainer.extend(snapshot, trigger=(1, 'iteration'), priority=2)
 
@@ -260,12 +265,9 @@ class TestRemoveStaleSnapshots(unittest.TestCase):
         expected.sort()
         assert expected == found
 
-        trainer2 = testing.get_trainer_with_mock_updater()
+        trainer2 = get_trainer_with_mock_updater()
         trainer2.out = self.path
         assert not trainer2._done
         snapshot2 = extensions.snapshot(filename=fmt, autoload=True)
         # Just making sure no error occurs
         snapshot2.initialize(trainer2)
-
-
-testing.run_module(__name__, __file__)
