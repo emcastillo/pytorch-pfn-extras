@@ -134,7 +134,7 @@ def main():
         extensions.ExponentialShift(
             'lr', 0.9999, optimizer, init=0.2, target=0.1),
         extensions.observe_lr(optimizer=optimizer),
-        #extensions.ParameterStatistics(model, prefix='model'),
+        extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),
         extensions.Evaluator(
             test_loader, model,
