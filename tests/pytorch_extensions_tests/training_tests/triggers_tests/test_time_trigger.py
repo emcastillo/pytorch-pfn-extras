@@ -25,3 +25,16 @@ def test_call():
     # second event is triggerred on time==2.0, and is not on time==2.2
     trainer.elapsed_time = 2.1
     assert trigger(trainer)
+
+
+def test_resume():
+    trigger = pte.training.triggers.TimeTrigger(1)
+    trainer = DummyTrainer()
+    trainer.elapsed_time = 1.2
+    trigger(trainer)
+    assert trigger._next_time == 2.0
+
+    state = trigger.state_dict()
+    trigger2 = pte.training.triggers.TimeTrigger(1)
+    trigger2.load_state_dict(state)
+    assert trigger._next_time == 2.0
