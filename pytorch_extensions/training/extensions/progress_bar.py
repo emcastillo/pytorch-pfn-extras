@@ -14,9 +14,9 @@ class ProgressBar(extension.Extension):
     iteration and epoch to print the bar.
 
     Args:
-        training_length (tuple): Length of whole training. It consists of an
-            integer and either ``'epoch'`` or ``'iteration'``. If this value is
-            omitted and the stop trigger of the trainer is
+        training_length (tuple or None): Length of whole training. It consists
+            of an integer and either ``'epoch'`` or ``'iteration'``. If this
+            value is omitted and the stop trigger of the trainer is
             :class:`IntervalTrigger`, this extension uses its attributes to
             determine the length of the training.
         update_interval (int): Number of iterations to skip printing the
@@ -29,15 +29,15 @@ class ProgressBar(extension.Extension):
     def __init__(self, training_length=None, update_interval=100,
                  bar_length=50, out=sys.stdout):
         self._training_length = training_length
-        self._updater_template = None
         self._update_interval = update_interval
         self._bar_length = bar_length
         self._out = out
-        self._recent_timing = []
-        self._pbar = _TrainerProgressBar()
+        self._pbar = None
 
     def __call__(self, trainer):
-        self._pbar.trainer = trainer
+        if self._pbar is None:
+            self._pbar = _TrainerProgressBar(
+                trainer, self._training_length, self._bar_length, self._out)
 
         iteration = trainer.updater.iteration
         # print the progress bar
@@ -50,9 +50,12 @@ class ProgressBar(extension.Extension):
 
 class _TrainerProgressBar(util.ProgressBar):
 
-    trainer = None
-    training_length = None
-    updater_template = None
+    def __init__(self, trainer, training_length, bar_length, out):
+        super(_TrainerProgressBar, self).__init__(out)
+        self.trainer = trainer
+        self.training_length = training_length
+        self.bar_length = bar_length
+        self.updater_template = None
 
     def get_lines(self):
         lines = []
@@ -71,7 +74,7 @@ class _TrainerProgressBar(util.ProgressBar):
             rate = epoch / length
         rate = min(rate, 1.0)
 
-        bar_length = self._bar_length
+        bar_length = self.bar_length
         marks = '#' * int(rate * bar_length)
         lines.append('     total [{}{}] {:6.2%}\n'.format(
             marks, '.' * (bar_length - len(marks)), rate))

@@ -60,8 +60,7 @@ if os.name == 'nt':
 
 class ProgressBar(object):
 
-    def __init__(self, bar_length=None, out=None):
-        self._bar_length = 50 if bar_length is None else bar_length
+    def __init__(self, out=None):
         self._out = sys.stdout if out is None else out
         self._recent_timing = collections.deque([], maxlen=100)
 
