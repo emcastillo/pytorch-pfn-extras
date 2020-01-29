@@ -215,11 +215,18 @@ class ExtensionsManager(object):
     @contextlib.contextmanager
     def run_iteration(self, *, iteration, epoch_size):
         # To fool the extensions to believe there is an updater
-        self.updater.iteration = iteration + self._start_iteration
+        c_iteration = iteration + self._start_iteration
         self.updater.epoch_size = epoch_size
         if self._start_time is None:
             self._start_time = _get_time()
             self.start_extensions()
+            # We might have had a snapshot autoload on the beginning
+            # changing the initial offsets
+            c_iteration = iteration + self._start_iteration
+
+        self.updater.iteration = c_iteration
+        self.updater.epoch_size = epoch_size
+
         self.observation = {}
         with self.reporter.scope(self.observation):
             try:
@@ -247,7 +254,9 @@ class ExtensionsManager(object):
         return to_save
 
     def load_state_dict(self, to_load):
-        self._start_iteration = to_load['state']['iteration']
+        self._start_iteration = to_load['_start_iteration']
+        if getattr(self, 'updater', None) is not None:
+            self.updater.iteration = self._start_iteration
         for name in self._models:
             self._models[name].load_state_dict(to_load['models'][name])
 
@@ -304,6 +313,11 @@ class IgniteExtensionsManager(ExtensionsManager):
 
     def state_dict(self):
         to_save = super().state_dict()
-        to_save['state'] = {'iteration': self.engine.state.iteration,
-                            'epoch': self.engine.state.epoch}
+        to_save['_start_epoch'] = self.engine.state.epoch
+        to_save['_start_iteration'] = self.engine.state.iteration
         return to_save
+
+    def load_state_dict(self, to_load):
+        super().load_state_dict(to_load)
+        self.engine.state.epoch = self._start_epoch
+        self.engine.state.iteration = self._start_iteration
