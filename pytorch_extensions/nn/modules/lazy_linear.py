@@ -1,5 +1,6 @@
 import torch
 
+from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 from pytorch_extensions.nn.modules.lazy import LazyInitializationMixin
 
 
@@ -17,10 +18,10 @@ class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
             0 if in_features is None else in_features, *args, **kwargs)
         if in_features is None:
             self.in_features = None
-            self.weight = None
+            self.weight = UninitializedParameter()
 
     def forward(self, input):
-        if self.weight is None:
+        if isinstance(self.weight, UninitializedParameter):
             self.in_features = input.shape[-1]
             self.weight = torch.nn.Parameter(torch.Tensor(
                 self.out_features, self.in_features))

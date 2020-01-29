@@ -1,6 +1,7 @@
 import torch
 
 from pytorch_extensions.nn.modules.lazy import LazyInitializationMixin
+from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 
 
 class _LazyConvNd(LazyInitializationMixin):
@@ -12,10 +13,10 @@ class _LazyConvNd(LazyInitializationMixin):
             0 if in_channels is None else in_channels, *args, **kwargs)
         if in_channels is None:
             self.in_channels = None
-            self.weight = None
+            self.weight = UninitializedParameter()
 
     def forward(self, input):
-        if self.weight is None:
+        if isinstance(self.weight, UninitializedParameter):
             self.in_channels = input.shape[1]
             if self.transposed:
                 shape = (self.in_channels, self.out_channels // self.groups,
@@ -24,9 +25,9 @@ class _LazyConvNd(LazyInitializationMixin):
                 shape = (self.out_channels, self.in_channels // self.groups,
                          *self.kernel_size)
             self.weight = torch.nn.Parameter(torch.Tensor(*shape))
-            # Send lazy-defined parameter to the same device as the input.
+            # Initialize parameters on the input device, like as in the
+            # original module.
             self.to(input.device)
-            # Initialize parameters.
             self.reset_parameters()
         return super(_LazyConvNd, self).forward(input)
 

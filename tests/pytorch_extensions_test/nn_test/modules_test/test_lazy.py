@@ -7,6 +7,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from pytorch_extensions.nn.modules.lazy import LazyInitializationMixin
+from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 
 
 class _MyFunc(torch.nn.Module):
@@ -36,10 +37,10 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
             0 if in_features is None else in_features, out_features)
         if in_features is None:
             self.in_features = None
-            self.weight = None
+            self.weight = UninitializedParameter()
 
     def forward(self, input):
-        if self.weight is None:
+        if isinstance(self.weight, UninitializedParameter):
             self.in_features = input.shape[-1]
             self.weight = torch.nn.Parameter(
                 torch.Tensor(self.out_features, self.in_features))
@@ -76,7 +77,6 @@ class LazyTestBase(object):
         torch.manual_seed(0)
         actual = lazy_module(input)
 
-        assert (orig_module.weight.data == lazy_module.weight.data).all()
         assert expected.shape == actual.shape
         assert (expected == actual).all()
 
