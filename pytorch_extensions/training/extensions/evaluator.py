@@ -48,8 +48,9 @@ class Evaluator(extension.Extension):
         iterator: Dataset iterator for the validation dataset. It can also be
             a dictionary of iterators. If this is just an iterator, the
             iterator is registered by the name ``'main'``.
-        target: Link object or a dictionary of links to evaluate. If this is
-            just a link object, the link is registered by the name ``'main'``.
+        target: torch.nn.Module object or a dictionary of links to evaluate.
+            If this is just a layer object, the link is registered by the
+            name ``'main'``.
         eval_func: Evaluation function called at each iteration. The target
             link to evaluate as a callable is used by default.
         progress_bar: Boolean flag to show a progress bar while training,

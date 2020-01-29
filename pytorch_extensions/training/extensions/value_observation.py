@@ -7,13 +7,15 @@ def observe_value(observation_key, target_func):
     Args:
         observation_key (str): Key of observation to record.
         target_func (function): Function that returns the value to record.
-            It must take one argument: :class:~chainer.training.Trainer object.
+            It must take one argument:
+            :class:~pytorch_extensions.training.ExtensionsManager object.
     Returns:
         The extension function.
 
     This extension is triggered each epoch by default.
     To change this, use the ``trigger`` argument with the
-    :meth:`Trainer.extend() <chainer.training.Trainer.extend>` method.
+    :meth:`ExtensionsManager.extend() <pytorch_extensions.training\
+           .ExtensionsManager>` method.
 
     """
     @extension.make_extension(
@@ -37,7 +39,8 @@ def observe_lr(optimizer, param_group=0, observation_key='lr'):
 
     This extension is triggered each epoch by default.
     To change this, use the ``trigger`` argument with the
-    :meth:`Trainer.extend() <chainer.training.Trainer.extend>` method.
+    :meth:`ExtensionsManager.extend() <pytorch_extensions.training\
+           .ExtensionsManager>` method.
 
     """
     return observe_value(
