@@ -1,6 +1,5 @@
 import collections
 import contextlib
-import json
 import threading
 import typing as tp  # NOQA
 import warnings
@@ -379,22 +378,10 @@ class DictSummary(object):
         return stats
 
     def state_dict(self):
-        state = {}
-        names = list(self._summaries.keys())
-        state['names'] = json.dumps(names)
-        state['_summaries'] = {}
-        sums = state['_summaries']
-        for index, name in enumerate(names):
-            sums[str(index)] = self._summaries[index].state_dict()
-        return state
+        return {
+            name: summ.state_dict() for name, summ in self._summaries.items()}
 
     def load_state_dict(self, to_load):
         self._summaries.clear()
-        try:
-            names = json.loads(to_load['names'])
-        except KeyError:
-            warnings.warn('The names of statistics are not saved.')
-            return
-        sums = to_load['_summaries']
-        for index, name in enumerate(names):
-            self._summaries[name].load_state_dict(sums[str(index)])
+        for name, summ_state in to_load.items():
+            self._summaries[name].load_state_dict(summ_state)
