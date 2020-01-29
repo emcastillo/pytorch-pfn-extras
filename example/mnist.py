@@ -14,12 +14,18 @@ manager = None
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, no_lazy):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
+        if no_lazy:
+            self.conv1 = nn.Conv2d(1, 20, 5, 1)
+            self.conv2 = nn.Conv2d(20, 50, 5, 1)
+            self.fc1 = nn.Linear(4*4*50, 500)
+            self.fc2 = nn.Linear(500, 10)
+        else:
+            self.conv1 = pte.nn.LazyConv2d(None, 20, 5, 1)
+            self.conv2 = pte.nn.LazyConv2d(None, 50, 5, 1)
+            self.fc1 = pte.nn.LazyLinear(None, 500)
+            self.fc2 = pte.nn.LazyLinear(None, 10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -88,6 +94,8 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--snapshot', type=str, default=None,
                         help='path to snapshot file')
+    parser.add_argument('--no-lazy', default=True, action='store_false',
+                        help='do not use lazy modules')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -110,7 +118,10 @@ def main():
                        ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = Net().to(device)
+    model = Net(args.no_lazy)
+    if not args.no_lazy:
+        model(train_loader.dataset[0][0])
+    model.to(device)
     optimizer = optim.SGD(
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
@@ -123,7 +134,7 @@ def main():
         extensions.ExponentialShift(
             'lr', 0.9999, optimizer, init=0.2, target=0.1),
         extensions.observe_lr(optimizer=optimizer),
-        extensions.ParameterStatistics(model, prefix='model'),
+        #extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),
         extensions.Evaluator(
             test_loader, model,
