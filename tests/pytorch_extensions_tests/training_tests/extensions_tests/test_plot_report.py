@@ -3,8 +3,7 @@ import warnings
 
 import pytest
 
-from chainer import testing
-from chainer.training import extensions
+from pytorch_extensions.training import extensions
 
 
 try:
@@ -14,7 +13,9 @@ except ImportError:
     _available = False
 
 
-class TestPlotReport(unittest.TestCase):
+if True:
+    @pytest.fixture()
+    def self(): return unittest.TestCase()
 
     def test_available(self):
         if _available:
@@ -44,6 +45,3 @@ class TestPlotReport(unittest.TestCase):
             matplotlib.use('PS')
 
         self.assertEqual(len(w), 0)
-
-
-testing.run_module(__name__, __file__)
