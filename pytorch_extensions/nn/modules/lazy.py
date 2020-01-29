@@ -47,8 +47,8 @@ class LazyInitializationMixin(object):
         `__init__`.
         """
         return self._lazy_ready and all([
-            not isinstance(getattr(self, x), UninitializedParameter) for x in self._lazy_parameter_keys])
-            #getattr(self, x) is not None for x in self._lazy_parameter_keys])
+            not isinstance(getattr(self, x), UninitializedParameter)
+            for x in self._lazy_parameter_keys])
 
     def state_dict(self, *args, **kwargs):
         # Exclude uninitialized parameter from serialization.
@@ -59,7 +59,8 @@ class LazyInitializationMixin(object):
                 del destination[key]
         return destination
 
-    def _lazy_load_hook(self, state_dict, prefix, local_metadata, strict,
+    def _lazy_load_hook(
+            self, state_dict, prefix, local_metadata, strict,
             missing_keys, unexpected_keys, error_msgs):
         for key in self._lazy_buffer_keys:
             self.register_buffer(key, state_dict[prefix + key])

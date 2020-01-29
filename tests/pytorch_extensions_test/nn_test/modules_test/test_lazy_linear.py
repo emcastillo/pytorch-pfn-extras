@@ -1,8 +1,5 @@
-import pytest
-
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from pytorch_extensions.nn import LazyLinear
 
