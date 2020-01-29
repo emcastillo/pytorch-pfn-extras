@@ -11,9 +11,8 @@ import pytest
 
 from pytorch_extensions import training
 from pytorch_extensions.training import extensions
-from pytorch_extensions.training.extensions._snapshot import _find_latest_snapshot
-from pytorch_extensions.training.extensions._snapshot import _find_snapshot_files
-from pytorch_extensions.training.extensions._snapshot import _find_stale_snapshots
+from pytorch_extensions.training.extensions._snapshot import (
+    _find_latest_snapshot, _find_snapshot_files, _find_stale_snapshots)
 
 
 def get_trainer_with_mock_updater():
@@ -110,10 +109,11 @@ class TestSnapshotOnError(unittest.TestCase):
         self.assertTrue(os.path.exists(self.filename))
 
 
-@pytest.mark.parametrize('fmt',
-                                        ['snapshot_iter_{}',
-                                         'snapshot_iter_{}.npz',
-                                         '{}_snapshot_man_suffix.npz'])
+@pytest.mark.parametrize('fmt', [
+    'snapshot_iter_{}',
+    'snapshot_iter_{}.npz',
+    '{}_snapshot_man_suffix.npz',
+])
 class TestFindSnapshot(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
@@ -160,11 +160,12 @@ class TestFindSnapshot(unittest.TestCase):
                                                             self.path)
 
 
-@pytest.mark.parametrize('fmt',
-                                        ['snapshot_iter_{}_{}',
-                                         'snapshot_iter_{}_{}.npz',
-                                         '{}_snapshot_man_{}-suffix.npz',
-                                         'snapshot_iter_{}.{}'])
+@pytest.mark.parametrize('fmt', [
+    'snapshot_iter_{}_{}',
+    'snapshot_iter_{}_{}.npz',
+    '{}_snapshot_man_{}-suffix.npz',
+    'snapshot_iter_{}.{}',
+])
 class TestFindSnapshot2(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
@@ -193,9 +194,10 @@ class TestFindSnapshot2(unittest.TestCase):
         assert expected == snapshot_files
 
 
-@pytest.mark.parametrize('length_retain',
-                                        [(100, 30), (10, 30), (1, 1000),
-                                         (1000, 1), (1, 1), (1, 3), (2, 3)])
+@pytest.mark.parametrize('length_retain', [
+    (100, 30), (10, 30), (1, 1000),
+    (1000, 1), (1, 1), (1, 3), (2, 3),
+])
 class TestFindStaleSnapshot(unittest.TestCase):
     def setUp(self):
         self.path = tempfile.mkdtemp()
