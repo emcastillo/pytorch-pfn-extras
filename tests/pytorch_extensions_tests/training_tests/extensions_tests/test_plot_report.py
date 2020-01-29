@@ -1,4 +1,3 @@
-import unittest
 import warnings
 
 import pytest
@@ -6,41 +5,40 @@ import pytest
 from pytorch_extensions.training import extensions
 
 
-try:
-    import matplotlib
-    _available = True
-except ImportError:
-    _available = False
+@pytest.fixture(scope="module")
+def matplotlib_or_none():
+    try:
+        import matplotlib
+        return matplotlib
+    except ImportError:
+        return None
 
 
-@pytest.fixture()
-def self(): return unittest.TestCase()
+@pytest.fixture(scope="module")
+def matplotlib(matplotlib_or_none):
+    if matplotlib_or_none is None:
+        pytest.skip('matplotlib is not installed')
+    return matplotlib_or_none
 
-def test_available(self):
-    if _available:
-        self.assertTrue(extensions.PlotReport.available())
+
+def test_available(matplotlib_or_none):
+    if matplotlib_or_none is not None:
+        assert extensions.PlotReport.available() is True
     else:
         # It shows warning only when matplotlib is not available
         with pytest.warns(UserWarning):
-            self.assertFalse(extensions.PlotReport.available())
+            assert extensions.PlotReport.available() is False
 
-# In the following we explicitly use plot_report._available instead of
-# PlotReport.available() because in some cases `test_available()` fails
-# because it sometimes does not raise UserWarning despite
-# matplotlib is not installed (this is due to the difference between
-# the behavior of unittest in python2 and that in python3).
-@unittest.skipUnless(_available, 'matplotlib is not installed')
-def test_lazy_import(self):
+
+# TODO(kataoka): lazy import does not seem to be required with matplotlib v3
+def test_lazy_import(matplotlib):
     # matplotlib.pyplot should be lazily imported because matplotlib.use
     # has to be called earlier.
 
-    # To support python2, we do not use self.assertWarns()
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter('always')
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
         matplotlib.use('Agg')
         # Test again with a different backend, because the above does not
         # generate a warning if matplotlib.use('Agg') is called and then
         # matplotlib.pyplot is imported.
         matplotlib.use('PS')
-
-    self.assertEqual(len(w), 0)
