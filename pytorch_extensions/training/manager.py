@@ -88,16 +88,6 @@ class ExtensionsManager(object):
         self._start_iteration = 0
         self.updater = FoolUpdater(0, 0)
 
-        # Warn if uninitialized lazy parameters are given in optimizers.
-        for optim_name, optim in optimizers.items():
-            for param_group in optim.param_groups:
-                for param in param_group['params']:
-                    if isinstance(param, UninitializedParameter):
-                        warnings.warn('''
-    Optimizer '{}' is holding uninitialized lazy parameter.
-    Maybe you forgot to run forward before passing module.parameters() to the \
-optimizer?'''.format(optim_name))
-
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()

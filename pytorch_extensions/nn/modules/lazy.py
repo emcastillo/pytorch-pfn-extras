@@ -1,3 +1,5 @@
+import warnings
+
 import torch
 
 
@@ -87,4 +89,18 @@ class LazyInitializationMixin(object):
 
 
 class UninitializedParameter(torch.nn.Parameter):
-    pass
+
+    def __repr__(self):
+        return 'Uninitialized lazy parameter'
+
+    @property
+    def is_leaf(self):
+        # Hacky workaround to detect use of uninitialized lazy parameters.
+        # This overrides `is_leaf` attribute which should always be `True`
+        # for parameters; optimizers check for this attribute and raise an
+        # error if non-leaf tensors are detected.
+        warnings.warn('''
+    Use of uninitialized lazy parameter has been detected.
+    Maybe you forgot to run forward before passing `module.parameters()` to the \
+optimizer?''')
+        return True
