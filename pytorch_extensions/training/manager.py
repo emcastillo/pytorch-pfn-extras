@@ -249,7 +249,7 @@ class ExtensionsManager(object):
         return to_save
 
     def load_state_dict(self, to_load):
-        self._start_iteration = to_load['state']['iteration']
+        self._start_iteration = to_load['_start_iteration']
         for name in self._models:
             self._models[name].load_state_dict(to_load['models'][name])
 
