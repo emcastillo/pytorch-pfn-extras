@@ -273,7 +273,6 @@ class ExtensionsManager(_BaseExtensionsManager):
     def run_iteration(self):
         if self.updater is None:
             raise RuntimeError('Training is not started')
-        # To fool the extensions to believe there is an updater
         if self._start_time is None:
             self._start_time = _get_time()
             self.start_extensions()
