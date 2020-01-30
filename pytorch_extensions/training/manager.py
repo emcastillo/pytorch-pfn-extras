@@ -102,7 +102,7 @@ class _BaseExtensionsManager:
     def is_before_training(self):
         return self.updater is None or self.updater.iteration == 0
 
-    def _prepare_for_training(self, iters_per_epoch, *, start_iteration=0):
+    def _prepare_for_training(self, start_iteration, iters_per_epoch):
         assert self.updater is None
         self.updater = FoolUpdater(start_iteration, iters_per_epoch)
 
@@ -266,7 +266,7 @@ class ExtensionsManager(_BaseExtensionsManager):
         super().__init__(
             models, optimizers, max_epochs, extensions,
             out_dir=out_dir)
-        self._prepare_for_training(iters_per_epoch, start_iteration=0)
+        self._prepare_for_training(0, iters_per_epoch)
 
     @contextlib.contextmanager
     def run_iteration(self):
@@ -315,9 +315,7 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             self.engine.state.iteration = start_iteration
             self._start_time = _get_time()
             iters_per_epoch = len(engine.state.dataloader)
-            self._prepare_for_training(
-                iters_per_epoch,
-                start_iteration=start_iteration)
+            self._prepare_for_training(start_iteration, iters_per_epoch)
             self.start_extensions()
             # Make all the next
             # handlers to be executed after user defined ones
