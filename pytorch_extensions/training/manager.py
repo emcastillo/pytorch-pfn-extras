@@ -103,8 +103,7 @@ class _BaseExtensionsManager:
         return self.updater is None or self.updater.iteration == 0
 
     def _prepare_for_training(self, iters_per_epoch, *, start_iteration=0):
-        if self.updater is not None:
-            raise RuntimeError('Training is already started.')
+        assert self.updater is None
         self.updater = FoolUpdater(start_iteration, iters_per_epoch)
 
     def start_extensions(self):
@@ -271,8 +270,7 @@ class ExtensionsManager(_BaseExtensionsManager):
 
     @contextlib.contextmanager
     def run_iteration(self):
-        if self.updater is None:
-            raise RuntimeError('Training is not started')
+        assert self.updater is not None
         if self._start_time is None:
             self._start_time = _get_time()
             self.start_extensions()
