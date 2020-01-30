@@ -2,7 +2,6 @@ import collections
 import contextlib
 import os
 import time
-import warnings
 
 from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 from pytorch_extensions.training import extension as extension_module
@@ -87,7 +86,6 @@ class ExtensionsManager(object):
         self.max_epochs = max_epochs
         self._start_iteration = 0
         self.updater = FoolUpdater(0, 0)
-
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()
