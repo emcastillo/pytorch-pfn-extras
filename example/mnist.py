@@ -94,7 +94,7 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--snapshot', type=str, default=None,
                         help='path to snapshot file')
-    parser.add_argument('--no-lazy', default=True, action='store_false',
+    parser.add_argument('--no-lazy', default=False, action='store_true',
                         help='do not use lazy modules')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
