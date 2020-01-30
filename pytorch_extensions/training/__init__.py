@@ -1,3 +1,4 @@
+from pytorch_extensions.training.convert import transfer_data  # NOQA
 from pytorch_extensions.training.extension import Extension  # NOQA
 from pytorch_extensions.training.extension import make_extension  # NOQA
 from pytorch_extensions.training.extension import PRIORITY_EDITOR  # NOQA
