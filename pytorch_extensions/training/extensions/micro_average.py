@@ -31,9 +31,9 @@ class MicroAverage(extension.Extension):
     You need to report numerator value (the number of correct examples) and
     denominator value (the number of examples) in your model.
 
-    >>> class MyModel(chainer.Link):
+    >>> class MyModel(torch.nn.Module):
     ...     def __call__(self, x, y):
-    ...         loss = F.softmax_cross_entropy(x, y)
+    ...         loss = torch.nn.CrossEntropyLoss(x, y)
     ...         correct = (x.data.argmax(axis=1) == y.data).sum()
     ...         total = len(y.data)
     ...         reporter.report({'correct': correct, 'total': total}, self)

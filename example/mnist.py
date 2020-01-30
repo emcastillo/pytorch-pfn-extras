@@ -44,7 +44,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
     for batch_idx, (data, target) in enumerate(train_loader):
         current_it = epoch * epoch_size + batch_idx
         with manager.run_iteration(
-                epoch=epoch, iteration=current_it, epoch_size=epoch_size):
+                iteration=current_it, epoch_size=epoch_size):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
