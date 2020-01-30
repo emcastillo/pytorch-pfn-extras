@@ -27,7 +27,7 @@ class OnceTrigger(object):
     def finished(self):
         return not (self._flag_first or self._flag_resumed)
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         fire = not self.finished
         self._flag_resumed = False
         self._flag_first = False

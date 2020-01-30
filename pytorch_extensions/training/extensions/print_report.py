@@ -52,7 +52,7 @@ def filter_and_sort_entries(all_entries, unit='epoch'):
 
 class PrintReport(extension.Extension):
 
-    """Trainer extension to print the accumulated results.
+    """An extension to print the accumulated results.
 
     This extension uses the log accumulated by a :class:`LogReport` extension
     to print specified entries of the log in a human-readable format.
@@ -62,7 +62,7 @@ class PrintReport(extension.Extension):
             If `None` is passed, automatically infer keys from reported dict.
         log_report (str or LogReport): Log report to accumulate the
             observations. This is either the name of a LogReport extensions
-            registered to the trainer, or a LogReport instance to use
+            registered to the manager, or a LogReport instance to use
             internally.
         out: Stream to print the bar. Standard output is used by default.
 
@@ -86,12 +86,12 @@ class PrintReport(extension.Extension):
         self._templates = templates
         self._all_entries = []
 
-    def get_log_report(self, trainer):
+    def get_log_report(self, manager):
         log_report = self._log_report
         if isinstance(log_report, str):
-            log_report = trainer.get_extension(log_report)
+            log_report = manager.get_extension(log_report)
         elif isinstance(log_report, log_report_module.LogReport):
-            log_report(trainer)  # update the log report
+            log_report(manager)  # update the log report
         else:
             raise TypeError('log report has a wrong type %s' %
                             type(log_report))
@@ -120,8 +120,8 @@ class PrintReport(extension.Extension):
             self._header = header  # printed at the first call
             self._templates = templates
 
-    def __call__(self, trainer):
-        log_report = self.get_log_report(trainer)
+    def __call__(self, manager):
+        log_report = self.get_log_report(manager)
         log = log_report.log
 
         if self._infer_entries:

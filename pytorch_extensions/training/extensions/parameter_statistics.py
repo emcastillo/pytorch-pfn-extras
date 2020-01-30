@@ -18,7 +18,7 @@ _default_statistics = {
 
 
 class ParameterStatistics(extension.Extension):
-    """Trainer extension to report parameter statistics.
+    """An extension to report parameter statistics.
 
     Statistics are collected and reported for a given :class:`~torch.nn.Module`
     or an iterable of :class:`~torch.nn.Module`\\ s. If a link contains child

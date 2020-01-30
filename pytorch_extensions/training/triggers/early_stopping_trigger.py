@@ -95,30 +95,30 @@ class EarlyStoppingTrigger(object):
                 print('early stopping: operator is less')
             self.best = float('inf')
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         """Decides whether the training loop should be stopped.
 
         Args:
-            trainer (~pytorch_extensions.trainer.ExtensionsManager):
-                Trainer object that this
-                trigger is associated with. The ``observation`` of this trainer
+            manager (~pytorch_extensions.training.ExtensionsManager):
+                Manager object that this
+                trigger is associated with. The ``observation`` of this manager
                 is used to determine if the trigger should fire.
 
         Returns:
             bool: ``True`` if the training loop should be stopped.
         """
 
-        observation = trainer.observation
+        observation = manager.observation
 
         summary = self._summary
 
         if self.monitor in observation:
             summary.add({self.monitor: observation[self.monitor]})
 
-        if self._max_trigger(trainer):
+        if self._max_trigger(manager):
             return True
 
-        if not self._interval_trigger(trainer):
+        if not self._interval_trigger(manager):
             return False
 
         if self.monitor not in observation.keys():
@@ -138,7 +138,7 @@ class EarlyStoppingTrigger(object):
 
         if self._stop_condition():
             if self.verbose:
-                print('Epoch {}: early stopping'.format(trainer.updater.epoch))
+                print('Epoch {}: early stopping'.format(manager.updater.epoch))
             return True
 
         return False

@@ -131,7 +131,7 @@ class _BaseExtensionsManager:
 
     def extend(self, extension, name=None, trigger=None, priority=None,
                *, call_before_training=False, **kwargs):
-        """Registers an extension to the trainer.
+        """Registers an extension to the manager.
 
         :class:`Extension` is a callable object which is called after each
         update unless the corresponding trigger object decides to skip the
