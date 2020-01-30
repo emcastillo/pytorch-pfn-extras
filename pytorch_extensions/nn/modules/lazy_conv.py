@@ -24,10 +24,7 @@ class _LazyConvNd(LazyInitializationMixin):
             else:
                 shape = (self.out_channels, self.in_channels // self.groups,
                          *self.kernel_size)
-            self.weight = torch.nn.Parameter(torch.Tensor(*shape))
-            # Initialize parameters on the input device, like as in the
-            # original module.
-            self.to(input.device)
+            self.weight = torch.nn.Parameter(self.weight.new_empty(*shape))
             self.reset_parameters()
         return super(_LazyConvNd, self).forward(input)
 

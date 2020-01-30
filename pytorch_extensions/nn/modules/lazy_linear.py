@@ -23,11 +23,8 @@ class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
     def forward(self, input):
         if isinstance(self.weight, UninitializedParameter):
             self.in_features = input.shape[-1]
-            self.weight = torch.nn.Parameter(torch.Tensor(
+            self.weight = torch.nn.Parameter(self.weight.new_empty(
                 self.out_features, self.in_features))
-            # Initialize parameters on the input device, like as in the
-            # original module.
-            self.to(input.device)
             self.reset_parameters()
         return super(LazyLinear, self).forward(input)
 
