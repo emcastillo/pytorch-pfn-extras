@@ -25,4 +25,4 @@ class TimeTrigger(object):
         return state
 
     def load_state_dict(self, to_load):
-        self._next_time = to_load['_next_time']
+        self._next_time = to_load['next_time']
