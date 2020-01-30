@@ -101,6 +101,5 @@ class UninitializedParameter(torch.nn.Parameter):
         # error if non-leaf tensors are detected.
         warnings.warn('''
     Use of uninitialized lazy parameter has been detected.
-    Maybe you forgot to run forward before passing `module.parameters()` to the \
-optimizer?''')
+    Maybe you forgot to run forward before passing `module.parameters()` to the optimizer?''')  # NOQA
         return True
