@@ -268,7 +268,8 @@ def test_dict_summary_weight():
     summary = pte.DictSummary()
     summary.add({'a': (1., 0.5)})
     summary.add({'a': (2., numpy.array(0.4))})
-    summary.add({'a': (3., torch.autograd.Variable(torch.Tensor(numpy.array(0.3))))})
+    summary.add(
+        {'a': (3., torch.autograd.Variable(torch.Tensor(numpy.array(0.3))))})
 
     mean = summary.compute_mean()
     val = (1 * 0.5 + 2 * 0.4 + 3 * 0.3) / (0.5 + 0.4 + 0.3)
