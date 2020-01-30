@@ -5,7 +5,7 @@ import pytorch_extensions as pte
 
 
 _parametrize = pytest.mark.parametrize(
-    'iter_per_epoch,call_on_resume,resume',
+    'iters_per_epoch,call_on_resume,resume',
     [
         # basic
         (5, False, 4),
@@ -23,30 +23,34 @@ _parametrize = pytest.mark.parametrize(
 
 
 @_parametrize
-def test_trigger(iter_per_epoch, call_on_resume, resume):
+def test_trigger(iters_per_epoch, call_on_resume, resume):
     del resume  # resume is ignored
     expected = [True] + [False] * 6
     finished = [False] + [True] * 6
-    manager = pte.training.ExtensionsManager({}, [], 100, [])
+    manager = pte.training.ExtensionsManager(
+        {}, [], 100, [],
+        iters_per_epoch=iters_per_epoch)
     trigger = pte.training.triggers.OnceTrigger(call_on_resume)
-    for it, (e, f) in enumerate(zip(expected, finished)):
+    for e, f in zip(expected, finished):
         assert trigger.finished == f
         assert trigger(manager) == e
-        with manager.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+        with manager.run_iteration():
             pass
 
 
 @_parametrize
-def test_resumed_trigger(iter_per_epoch, call_on_resume, resume):
+def test_resumed_trigger(iters_per_epoch, call_on_resume, resume):
     expected = [True] + [False] * 6
     finished = [False] + [True] * 6
     if call_on_resume:
         expected[resume] = True
         finished[resume] = False
-    manager = pte.training.ExtensionsManager({}, [], 100, [])
+    manager = pte.training.ExtensionsManager(
+        {}, [], 100, [],
+        iters_per_epoch=iters_per_epoch)
     trigger = pte.training.triggers.OnceTrigger(call_on_resume)
-    for it, (e, f) in enumerate(zip(expected[:resume], finished[:resume])):
-        with manager.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+    for e, f in zip(expected[:resume], finished[:resume]):
+        with manager.run_iteration():
             pass
         assert trigger.finished == f
         assert trigger(manager) == e
@@ -54,26 +58,27 @@ def test_resumed_trigger(iter_per_epoch, call_on_resume, resume):
 
     trigger2 = pte.training.triggers.OnceTrigger(call_on_resume)
     trigger2.load_state_dict(state)
-    for it, (e, f) in enumerate(zip(expected[resume:], finished[resume:])):
-        with manager.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+    for e, f in zip(expected[resume:], finished[resume:]):
+        with manager.run_iteration():
             pass
         assert trigger2.finished == f
         assert trigger2(manager) == e
 
 
 @_parametrize
-def test_trigger_sparse_call(iter_per_epoch, call_on_resume, resume):
+def test_trigger_sparse_call(iters_per_epoch, call_on_resume, resume):
     del resume  # resume is ignored
     expected = [True] + [False] * 6
     finished = [False] + [True] * 6
     for _ in range(10):
-        manager = pte.training.ExtensionsManager({}, [], 100, [])
+        manager = pte.training.ExtensionsManager(
+            {}, [], 100, [],
+            iters_per_epoch=iters_per_epoch)
         trigger = pte.training.triggers.OnceTrigger(call_on_resume)
         accumulated = False
         accumulated_finished = True
-        for it, (e, f) in enumerate(zip(expected, finished)):
-            with manager.run_iteration(
-                    iteration=it, epoch_size=iter_per_epoch):
+        for e, f in zip(expected, finished):
+            with manager.run_iteration():
                 accumulated = accumulated or e
                 accumulated_finished = accumulated_finished and f
                 if random.randrange(2):
