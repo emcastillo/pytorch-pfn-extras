@@ -15,10 +15,6 @@ _argvalues = [
     (1, (3, 'epoch'), [False, False, True, False, False, True, False]),
     # fractional epoch
     (2, (1.5, 'epoch'), [False, False, True, False, False, True, False]),
-    # unaligned epoch
-    (2.5, (1, 'epoch'), [False, False, True, False, True, False, False]),
-    # tiny epoch
-    (0.5, (1, 'epoch'), [True, True, True, True, True, True, True]),
 ]
 
 

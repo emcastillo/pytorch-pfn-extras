@@ -11,14 +11,6 @@ _parametrize = pytest.mark.parametrize(
         (5, False, 4),
         # call on resume
         (5, True, 4),
-        # unaligned epoch
-        (2.5, False, 3),
-        # unaligned epoch, call on resume
-        (2.5, True, 3),
-        # tiny epoch
-        (0.5, False, 4),
-        # tiny epoch, call on resume
-        (0.5, True, 4),
     ])
 
 

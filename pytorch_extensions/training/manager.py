@@ -266,6 +266,10 @@ class ExtensionsManager(_BaseExtensionsManager):
         super().__init__(
             models, optimizers, max_epochs, extensions,
             out_dir=out_dir)
+        if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
+            raise ValueError(
+                'iters_per_epoch must be an integer >= 1 ({} given)'.format(
+                    iters_per_epoch))
         self._prepare_for_training(0, iters_per_epoch)
 
     @contextlib.contextmanager
