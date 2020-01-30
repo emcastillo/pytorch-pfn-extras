@@ -120,7 +120,8 @@ def main():
 
     model = Net(args.no_lazy)
     if not args.no_lazy:
-        model(train_loader.dataset[0][0])
+        dummy_input = train_loader.dataset[0][0].unsqueeze(0)
+        model(dummy_input)
     model.to(device)
     optimizer = optim.SGD(
         model.parameters(), lr=args.lr, momentum=args.momentum)
