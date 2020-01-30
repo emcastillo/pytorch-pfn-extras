@@ -2,7 +2,9 @@ import collections
 import contextlib
 import os
 import time
+import warnings
 
+from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 from pytorch_extensions.training import extension as extension_module
 from pytorch_extensions.training import trigger as trigger_module
 from pytorch_extensions.reporter import Reporter
@@ -82,6 +84,17 @@ class ExtensionsManager(object):
         self._start_epoch = 0
         self._start_iteration = 0
         self.updater = FoolUpdater(0, 0, 0)
+
+        # Warn if uninitialized lazy parameters are given in optimizers.
+        for optim_name, optim in optimizers.items():
+            for param_group in optim.param_groups:
+                for param in param_group['params']:
+                    if isinstance(param, UninitializedParameter):
+                        warnings.warn('''
+    Optimizer '{}' is holding uninitialized lazy parameter.
+    Maybe you forgot to run forward before passing module.parameters() to the \
+optimizer?'''.format(optim_name))
+
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()
