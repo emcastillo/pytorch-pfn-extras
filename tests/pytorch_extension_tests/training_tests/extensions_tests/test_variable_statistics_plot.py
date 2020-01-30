@@ -36,9 +36,7 @@ def test_run_and_save_plot(matplotlib):
     # the behavior of unittest in python2 and that in python3).
     try:
         for i in range(iterations):
-            cur_it = 1+i
-            with manager.run_iteration(
-                    epoch=1, iteration=cur_it, epoch_size=2):
+            with manager.run_iteration(iteration=i, epoch_size=1):
                 pass
     finally:
         os.remove(os.path.join(manager.out, filename))

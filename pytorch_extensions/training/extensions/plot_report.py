@@ -41,8 +41,8 @@ filename='plot.png', marker='x', grid=True)
     Trainer extension to output plots.
 
     This extension accumulates the observations of the trainer to
-    :class:`~chainer.DictSummary` at a regular interval specified by a supplied
-    trigger, and plot a graph with using them.
+    :class:`~pytorch_extensions.reporter.DictSummary` at a regular
+    interval specified by a supplied trigger, and plot a graph with using them.
 
     There are two triggers to handle this extension. One is the trigger to
     invoke this extension, which is used to handle the timing of accumulating
@@ -133,7 +133,7 @@ filename='plot.png', marker='x', grid=True)
     def __call__(self, trainer):
         if self.available():
             # Dynamically import pyplot to call matplotlib.use()
-            # after importing chainer.training.extensions
+            # after importing pytorch_extensions.training.extensions
             import matplotlib.pyplot as plt
         else:
             return
