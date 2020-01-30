@@ -43,8 +43,8 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
         if isinstance(self.weight, UninitializedParameter):
             self.in_features = input.shape[-1]
             self.weight = torch.nn.Parameter(
-                torch.Tensor(self.out_features, self.in_features))
-            self.const = torch.full((self.in_features,), 1)
+                self.weight.new_empty((self.out_features, self.in_features)))
+            self.const = self.const.new_full((self.in_features,), 1)
             self._reset_params()
             self.to(input.device)
         return super(_LazyMyFunc, self).forward(input)
@@ -82,8 +82,7 @@ class LazyTestBase(object):
 
     def test_cuda(self):
         torch.manual_seed(0)
-        input = self.get_input()
-        input.cuda()
+        input = self.get_input().cuda()
 
         m1 = self.get_lazy_module()
         m1.cuda()
@@ -91,6 +90,24 @@ class LazyTestBase(object):
         expected = m1(input)
 
         m2 = self.get_lazy_module()
+        m2.cuda()
+        torch.manual_seed(0)
+        actual = m2(input)
+
+        assert expected.shape == actual.shape
+        assert (expected == actual).all()
+
+    def test_double(self):
+        torch.manual_seed(0)
+        input = self.get_input().double()
+
+        m1 = self.get_lazy_module()
+        m1.double()
+        torch.manual_seed(0)
+        expected = m1(input)
+
+        m2 = self.get_lazy_module()
+        m2.double()
         torch.manual_seed(0)
         actual = m2(input)
 
