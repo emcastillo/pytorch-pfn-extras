@@ -3,7 +3,6 @@ import contextlib
 import os
 import time
 
-from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 from pytorch_extensions.training import extension as extension_module
 from pytorch_extensions.training import trigger as trigger_module
 from pytorch_extensions.reporter import Reporter
