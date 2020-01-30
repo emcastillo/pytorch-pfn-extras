@@ -15,8 +15,7 @@ class LazyInitializationMixin(object):
     Be sure to run "dummy" forward once to initialize all parameters that
     should be trained, before passing `module.parameters()` to an optimizer;
     otherwise weights initialized after `module.parameters()` (e.g., in
-    `forward` function) will never be trained.  ExtensionsManager detects
-    such error and emits a warning.
+    `forward` function) will never be trained.
 
     Note that lazy modules cannot validate if the shape is correct during
     deserialization.  Also note that the initial weights may become different
