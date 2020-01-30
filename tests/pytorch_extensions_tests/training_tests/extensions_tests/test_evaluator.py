@@ -1,17 +1,13 @@
 import unittest
 
+import chainer.testing
 import numpy
+import torch
 
-import chainer
-from chainer import backend
-from chainer.backends import _cpu
-from chainer import dataset
-from chainer import iterators
-from chainer import testing
-from chainer.training import extensions
+import pytorch_extensions as pte
 
 
-class DummyModel(chainer.Chain):
+class DummyModel(torch.nn.Module):
 
     def __init__(self, test):
         super(DummyModel, self).__init__()
@@ -20,10 +16,10 @@ class DummyModel(chainer.Chain):
 
     def forward(self, x):
         self.args.append(x)
-        chainer.report({'loss': x.sum()}, self)
+        pte.reporter.report({'loss': x.sum()}, self)
 
 
-class DummyModelTwoArgs(chainer.Chain):
+class DummyModelTwoArgs(torch.nn.Module):
 
     def __init__(self, test):
         super(DummyModelTwoArgs, self).__init__()
@@ -32,25 +28,7 @@ class DummyModelTwoArgs(chainer.Chain):
 
     def forward(self, x, y):
         self.args.append((x, y))
-        with chainer.using_device(backend.get_device_from_array(x, y)):
-            chainer.report({'loss': x.sum() + y.sum()}, self)
-
-
-class DummyIterator(dataset.Iterator):
-
-    def __init__(self, return_values):
-        self.iterator = iter(return_values)
-        self.finalized = False
-        self.return_values = return_values
-
-    def reset(self):
-        self.iterator = iter(self.return_values)
-
-    def __next__(self):
-        return next(self.iterator)
-
-    def finalize(self):
-        self.finalized = True
+        pte.reporter.report({'loss': x.sum() + y.sum()}, self)
 
 
 class DummyConverter(object):
@@ -64,6 +42,13 @@ class DummyConverter(object):
         return next(self.iterator)
 
 
+def _torch_batch_to_numpy(batch):
+    # In Pytorch, a batch has the batch dimension. Squeeze it for comparison.
+    assert isinstance(batch, torch.Tensor)
+    assert batch.shape[0] == 1
+    return batch.squeeze(0).numpy()
+
+
 class TestEvaluator(unittest.TestCase):
 
     def setUp(self):
@@ -73,15 +58,15 @@ class TestEvaluator(unittest.TestCase):
             numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')
             for _ in range(2)]
 
-        self.iterator = DummyIterator(self.data)
+        self.data_loader = torch.utils.data.DataLoader(self.data)
         self.converter = DummyConverter(self.batches)
         self.target = DummyModel(self)
-        self.evaluator = extensions.Evaluator(
-            self.iterator, self.target, converter=self.converter)
+        self.evaluator = pte.training.extensions.Evaluator(
+            self.data_loader, self.target, converter=self.converter)
         self.expect_mean = numpy.mean([numpy.sum(x) for x in self.batches])
 
     def test_evaluate(self):
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         reporter.add_observer('target', self.target)
         with reporter:
             mean = self.evaluator.evaluate()
@@ -90,11 +75,12 @@ class TestEvaluator(unittest.TestCase):
         # evaluator collect results in order to calculate their mean.
         self.assertEqual(len(reporter.observation), 0)
 
-        # The converter gets results of the iterator.
+        # The converter gets results of the data loader.
         self.assertEqual(len(self.converter.args), len(self.data))
         for i in range(len(self.data)):
             numpy.testing.assert_array_equal(
-                self.converter.args[i]['batch'], self.data[i])
+                _torch_batch_to_numpy(self.converter.args[i]['batch']),
+                self.data[i])
             self.assertIsNone(self.converter.args[i]['device'])
 
         # The model gets results of converter.
@@ -106,7 +92,6 @@ class TestEvaluator(unittest.TestCase):
         self.assertAlmostEqual(mean['target/loss'], self.expect_mean, places=4)
 
         self.evaluator.finalize()
-        self.assertTrue(self.iterator.finalized)
 
     def test_call(self):
         mean = self.evaluator()
@@ -121,24 +106,18 @@ class TestEvaluator(unittest.TestCase):
             mean['eval/main/loss'], self.expect_mean, places=4)
 
     def test_current_report(self):
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         with reporter:
             mean = self.evaluator()
         # The result is reported to the current reporter.
         self.assertEqual(reporter.observation, mean)
 
 
-@chainer.testing.backend.inject_backend_tests(
-    None,
-    [
-        # NumPy
-        {},
-        # CuPy
-        {'use_cuda': True, 'cuda_device': 0},
-        {'use_cuda': True, 'cuda_device': 1},
-
-        # Custom converter is not supported for ChainerX.
-    ])
+@chainer.testing.parameterize(
+    {'device': None},
+    {'device': 'cpu'},
+    {'device': 'cuda'},
+)
 class TestEvaluatorTupleData(unittest.TestCase):
 
     def setUp(self):
@@ -150,47 +129,45 @@ class TestEvaluatorTupleData(unittest.TestCase):
             for _ in range(2)]
 
     def prepare(self, data, batches, device):
-        iterator = DummyIterator(data)
+        data_loader = torch.utils.data.DataLoader(data)
         converter = DummyConverter(batches)
         target = DummyModelTwoArgs(self)
-        evaluator = extensions.Evaluator(
-            iterator, target, converter=converter, device=device)
-        return iterator, converter, target, evaluator
+        evaluator = pte.training.extensions.Evaluator(
+            data_loader, target, converter=converter, device=device)
+        return data_loader, converter, target, evaluator
 
-    def test_evaluate(self, backend_config):
-        data = backend_config.get_array(self.data)
-        batches = [backend_config.get_array(b) for b in self.batches]
-        device = backend_config.device
+    def test_evaluate(self):
+        data = self.data
+        batches = self.batches
+        device = None if self.device is None else torch.device(self.device)
 
-        iterator, converter, target, evaluator = (
+        data_loader, converter, target, evaluator = (
             self.prepare(data, batches, device))
 
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         reporter.add_observer('target', target)
         with reporter:
             mean = evaluator.evaluate()
 
-        # The converter gets results of the iterator and the device number.
+        # The converter gets results of the data loader and the device number.
         self.assertEqual(len(converter.args), len(data))
-        if backend_config.use_cuda:
-            expected_device_arg = backend_config.cuda_device
-        else:
-            expected_device_arg = -1
+        expected_device_arg = device
 
         for i in range(len(data)):
             numpy.testing.assert_array_equal(
-                _cpu._to_cpu(converter.args[i]['batch']), self.data[i])
+                _torch_batch_to_numpy(converter.args[i]['batch']),
+                self.data[i])
             self.assertEqual(converter.args[i]['device'], expected_device_arg)
 
         # The model gets results of converter.
         self.assertEqual(len(target.args), len(batches))
         for i in range(len(batches)):
             numpy.testing.assert_array_equal(
-                _cpu._to_cpu(target.args[i]), self.batches[i])
+                target.args[i], self.batches[i])
 
         expect_mean = numpy.mean([numpy.sum(x) for x in self.batches])
         self.assertAlmostEqual(
-            _cpu._to_cpu(mean['target/loss']), expect_mean, places=4)
+            mean['target/loss'], expect_mean, places=4)
 
 
 class TestEvaluatorDictData(unittest.TestCase):
@@ -202,14 +179,14 @@ class TestEvaluatorDictData(unittest.TestCase):
              'y': numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')}
             for _ in range(2)]
 
-        self.iterator = DummyIterator(self.data)
+        self.data_loader = torch.utils.data.DataLoader(self.data)
         self.converter = DummyConverter(self.batches)
         self.target = DummyModelTwoArgs(self)
-        self.evaluator = extensions.Evaluator(
-            self.iterator, self.target, converter=self.converter)
+        self.evaluator = pte.training.extensions.Evaluator(
+            self.data_loader, self.target, converter=self.converter)
 
     def test_evaluate(self):
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         reporter.add_observer('target', self.target)
         with reporter:
             mean = self.evaluator.evaluate()
@@ -236,15 +213,15 @@ class TestEvaluatorWithEvalFunc(unittest.TestCase):
             numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')
             for _ in range(2)]
 
-        self.iterator = DummyIterator(self.data)
+        self.data_loader = torch.utils.data.DataLoader(self.data)
         self.converter = DummyConverter(self.batches)
         self.target = DummyModel(self)
-        self.evaluator = extensions.Evaluator(
-            self.iterator, {}, converter=self.converter,
+        self.evaluator = pte.training.extensions.Evaluator(
+            self.data_loader, {}, converter=self.converter,
             eval_func=self.target)
 
     def test_evaluate(self):
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         reporter.add_observer('target', self.target)
         with reporter:
             self.evaluator.evaluate()
@@ -256,39 +233,19 @@ class TestEvaluatorWithEvalFunc(unittest.TestCase):
                 self.target.args[i], self.batches[i])
 
 
-@testing.parameterize(*testing.product({
-    'repeat': [True, False],
-    'iterator_class': [iterators.SerialIterator,
-                       iterators.MultiprocessIterator,
-                       iterators.MultithreadIterator]
-}))
-class TestEvaluatorRepeat(unittest.TestCase):
-
-    def test_user_warning(self):
-        dataset = numpy.ones((4, 6))
-        iterator = self.iterator_class(dataset, 2, repeat=self.repeat)
-        if self.repeat:
-            with testing.assert_warns(UserWarning):
-                extensions.Evaluator(iterator, {})
-
-
 class TestEvaluatorProgressBar(unittest.TestCase):
 
     def setUp(self):
         self.data = [
             numpy.random.uniform(-1, 1, (3, 4)).astype('f') for _ in range(2)]
 
-        self.iterator = iterators.SerialIterator(
-            self.data, 1, repeat=False, shuffle=False)
+        self.data_loader = torch.utils.data.DataLoader(self.data, batch_size=1)
         self.target = DummyModel(self)
-        self.evaluator = extensions.Evaluator(
-            self.iterator, {}, eval_func=self.target, progress_bar=True)
+        self.evaluator = pte.training.extensions.Evaluator(
+            self.data_loader, {}, eval_func=self.target, progress_bar=True)
 
     def test_evaluator(self):
-        reporter = chainer.Reporter()
+        reporter = pte.reporter.Reporter()
         reporter.add_observer('target', self.target)
         with reporter:
             self.evaluator.evaluate()
-
-
-testing.run_module(__name__, __file__)
