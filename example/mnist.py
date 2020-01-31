@@ -9,9 +9,6 @@ from torchvision import datasets, transforms
 import pytorch_extensions as pte
 import pytorch_extensions.training.extensions as extensions
 
-# Extensions manager object
-manager = None
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -32,7 +29,7 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(manager, args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         with manager.run_iteration():
@@ -111,7 +108,6 @@ def main():
     optimizer = optim.SGD(
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
-    global manager
     # manager.extend(...) also works
     writer = extensions.snapshot_writers.SimpleWriter()
     my_extensions = [
@@ -145,7 +141,7 @@ def main():
         state = torch.load(args.snapshot)
         manager.load_state_dict(state)
     for epoch in range(0, args.epochs):
-        train(args, model, device, train_loader, optimizer, epoch)
+        train(manager, args, model, device, train_loader, optimizer, epoch)
         # Test function is called from the evaluator extension
         # to get access to the reporter and other facilities
         # test(args, model, device, test_loader)

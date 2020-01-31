@@ -116,7 +116,6 @@ def _call_converter(converter, batch, device):
     if isinstance(converter, Converter):
         # New-style converter
         return converter(batch, device)
-    print(batch, device)
     return converter(batch, device)
 
 
@@ -155,4 +154,4 @@ def _get_device(device_spec):
 
 @converter()
 def transfer_data(batch, device):
-    return [elem.to(device) for elem in batch]
+    return tuple([elem.to(device) for elem in batch])
