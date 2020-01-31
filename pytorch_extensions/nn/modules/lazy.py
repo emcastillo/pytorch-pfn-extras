@@ -59,7 +59,16 @@ class LazyInitializationMixin:
             for x in self._lazy_parameter_keys])
 
     def state_dict(self, *args, **kwargs):
-        # Exclude uninitialized parameter from serialization.
+        """Returns a dictionary containing a whole state of the module.
+
+        This function overrides the default behavior to exclude uninitialized
+        parameter from serialization.  This is needed because we need to
+        discriminate lazy parameters (``UninitializedParameter()`) and
+        initialized empty parameters (``torch.nn.Parameter(torch.Tensor())``"
+        during deserialization.
+
+        See comments of ``_lazy_load_hook`` for details.
+        """
         destination = super(LazyInitializationMixin, self).state_dict(
             *args, **kwargs)
         for key in self._lazy_parameter_keys:
@@ -70,12 +79,25 @@ class LazyInitializationMixin:
     def _lazy_load_hook(
             self, state_dict, prefix, local_metadata, strict,
             missing_keys, unexpected_keys, error_msgs):
+        """load_state_dict pre-hook function for lazy buffers and parameters.
+
+        The purpose of this hook is to adjust the current state and/or
+        ``state_dict`` being loaded so that a module instance serialized in
+        both un/initialized state can be deserialized onto both un/initialized
+        module instance.
+
+        See comment in ``torch.nn.Module._register_load_state_dict_pre_hook``
+        for the details of the hook specification.
+        """
         for key in self._lazy_buffer_keys:
+            # Avoid shape mismatch error when loading an initialized buffer
+            # onto an uninitialized module instance.
             self.register_buffer(key, state_dict[prefix + key])
+
         for key in self._lazy_parameter_keys:
             # The key may not exist in the loaded ``state_dict`` if the
             # original module was serialized before initializing lazy
-            # parameters.
+            # parameters (see comments of ``state_dict``).
             prefix_key = prefix + key
             if prefix_key in state_dict:
                 # The model was serialized after initialization.
