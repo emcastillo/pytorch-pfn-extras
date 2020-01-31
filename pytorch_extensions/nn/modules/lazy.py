@@ -20,7 +20,7 @@ class LazyInitializationMixin:
 
     Note that lazy modules cannot validate if the shape is correct during
     deserialization.  Also note that the initial weights may become different
-    from the original (non-lazy) module even if the random seed is manuall
+    from the original (non-lazy) module even if the random seed is manually
     configured, as the order of initialization is different from the original
     one; especially, ``module.cuda()`` may cause the initialization to run on
     a GPU.
@@ -64,7 +64,7 @@ class LazyInitializationMixin:
         This function overrides the default behavior to exclude uninitialized
         parameter from serialization.  This is needed because we need to
         discriminate lazy parameters (``UninitializedParameter()`) and
-        initialized empty parameters (``torch.nn.Parameter(torch.Tensor())``"
+        initialized empty parameters (``torch.nn.Parameter(torch.Tensor())``)
         during deserialization.
 
         See comments of ``_lazy_load_hook`` for details.
