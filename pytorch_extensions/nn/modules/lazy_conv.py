@@ -9,8 +9,7 @@ class _LazyConvNd(LazyInitializationMixin):
     _lazy_parameter_names = ('weight',)
 
     def __init__(self, in_channels, *args, **kwargs):
-        super().__init__(
-            0 if in_channels is None else in_channels, *args, **kwargs)
+        super().__init__(in_channels or 0, *args, **kwargs)
         if in_channels is None:
             self.in_channels = None
             self.weight = UninitializedParameter()

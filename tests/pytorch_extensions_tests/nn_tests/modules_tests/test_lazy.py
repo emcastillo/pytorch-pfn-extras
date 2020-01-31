@@ -32,8 +32,7 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
     _lazy_buffer_names = ('const',)
 
     def __init__(self, in_features, out_features):
-        super().__init__(
-            0 if in_features is None else in_features, out_features)
+        super().__init__(in_features or 0, out_features)
         if in_features is None:
             self.in_features = None
             self.weight = UninitializedParameter()

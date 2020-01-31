@@ -14,8 +14,7 @@ class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
     _lazy_parameter_names = ('weight',)
 
     def __init__(self, in_features, *args, **kwargs):
-        super().__init__(
-            0 if in_features is None else in_features, *args, **kwargs)
+        super().__init__(in_features or 0, *args, **kwargs)
         if in_features is None:
             self.in_features = None
             self.weight = UninitializedParameter()
