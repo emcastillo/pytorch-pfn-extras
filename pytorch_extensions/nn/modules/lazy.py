@@ -6,7 +6,7 @@ import torch
 
 class LazyInitializationMixin(object):
 
-    r"""Module that lazily initialize buffers and parameters.
+    r"""A mixin for modules that lazily initialize buffers and parameters.
 
     Unlike regular modules, subclasses of this module can initialize
     buffers and parameters outside of the constructor (`__init__`).
