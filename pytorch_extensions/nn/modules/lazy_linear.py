@@ -7,7 +7,7 @@ from pytorch_extensions.nn.modules.lazy import LazyInitializationMixin
 class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
     """Linear module with lazy weight initialization.
 
-    When `in_features` is `None`, it is determined at the first time of
+    When ``in_features`` is ``None``, it is determined at the first time of
     the forward step.
     """
 

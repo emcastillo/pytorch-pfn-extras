@@ -9,24 +9,24 @@ class LazyInitializationMixin:
     """A mixin for modules that lazily initialize buffers and parameters.
 
     Unlike regular modules, subclasses of this module can initialize
-    buffers and parameters outside of the constructor (`__init__`).
-    This allows you to, for example, initialize parameters in `forward`
+    buffers and parameters outside of the constructor (``__init__``).
+    This allows you to, for example, initialize parameters in ``forward``
     method to determine the shape of the weight based on the initial input.
 
     Be sure to run "dummy" forward once to initialize all parameters that
-    should be trained, before passing `module.parameters()` to an optimizer;
-    otherwise weights initialized after `module.parameters()` (e.g., in
-    `forward` function) will never be trained.
+    should be trained, before passing ``module.parameters()`` to an optimizer;
+    otherwise weights initialized after ``module.parameters()`` (e.g., in
+    ``forward`` function) will never be trained.
 
     Note that lazy modules cannot validate if the shape is correct during
     deserialization.  Also note that the initial weights may become different
     from the original (non-lazy) module even if the random seed is manuall
     configured, as the order of initialization is different from the original
-    one; especially, `module.cuda()` may cause the initialization to run on
+    one; especially, ``module.cuda()`` may cause the initialization to run on
     a GPU.
 
-    The default value of lazy buffers and parameters are `torch.Tensor([])`
-    and `UninitializedParameter()`, respectively.
+    The default value of lazy buffers and parameters are ``torch.Tensor([])``
+    and ``UninitializedParameter()``, respectively.
     """
 
     # Subclasses must override these fields and list names of all buffers /
@@ -52,7 +52,7 @@ class LazyInitializationMixin:
 
         Subclasses can perform parameters initialization after all lazy
         parameters are determined.  Note that this may be called during
-        `__init__`.
+        ``__init__``.
         """
         return self._lazy_ready and all([
             not isinstance(getattr(self, x), UninitializedParameter)
@@ -73,7 +73,7 @@ class LazyInitializationMixin:
         for key in self._lazy_buffer_keys:
             self.register_buffer(key, state_dict[prefix + key])
         for key in self._lazy_parameter_keys:
-            # The key may not exist in the loaded `state_dict` if the
+            # The key may not exist in the loaded ``state_dict`` if the
             # original module was serialized before initializing lazy
             # parameters.
             prefix_key = prefix + key
@@ -96,7 +96,7 @@ class UninitializedParameter(torch.nn.Parameter):
     @property
     def is_leaf(self):
         # Hacky workaround to detect use of uninitialized lazy parameters.
-        # This overrides `is_leaf` attribute which should always be `True`
+        # This overrides ``is_leaf`` attribute which should always be ``True``
         # for parameters; optimizers check for this attribute and raise an
         # error if non-leaf tensors are detected.
         frame = inspect.currentframe()

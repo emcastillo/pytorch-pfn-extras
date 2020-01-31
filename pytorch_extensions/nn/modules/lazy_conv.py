@@ -38,7 +38,7 @@ class _LazyConvNd(LazyInitializationMixin):
 class LazyConv1d(_LazyConvNd, torch.nn.Conv1d):
     """Conv1d module with lazy weight initialization.
 
-    When `in_channels` is `None`, it is determined at the first time of
+    When ``in_channels`` is ``None``, it is determined at the first time of
     the forward step.
     """
     pass
@@ -47,7 +47,7 @@ class LazyConv1d(_LazyConvNd, torch.nn.Conv1d):
 class LazyConv2d(_LazyConvNd, torch.nn.Conv2d):
     """Conv2d module with lazy weight initialization.
 
-    When `in_channels` is `None`, it is determined at the first time of
+    When ``in_channels`` is ``None``, it is determined at the first time of
     the forward step.
     """
     pass
@@ -56,7 +56,7 @@ class LazyConv2d(_LazyConvNd, torch.nn.Conv2d):
 class LazyConv3d(_LazyConvNd, torch.nn.Conv3d):
     """Conv3d module with lazy weight initialization.
 
-    When `in_channels` is `None`, it is determined at the first time of
+    When ``in_channels`` is ``None``, it is determined at the first time of
     the forward step.
     """
     pass
