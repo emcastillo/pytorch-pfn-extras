@@ -54,7 +54,7 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
             super()._reset_params()
 
 
-class LazyTestBase(object):
+class LazyTestBase:
 
     def get_original_module(self):
         raise NotImplementedError
