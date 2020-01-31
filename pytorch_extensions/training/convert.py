@@ -11,8 +11,8 @@ class Converter(object):
     Implementation should override the ``__call__`` method.
 
     .. seealso::
-        :meth:`chainer.dataset.converter` --- a decorator to turn a converter
-        function into a ``Converter`` instance.
+        :meth:`pytorch_extensions.convert.converter` --- a decorator
+        to turn a converter function into a ``Converter`` instance.
 
     """
 
@@ -22,7 +22,7 @@ class Converter(object):
         Args:
             batch:
                 A batch. The type and value are arbitrary, depending on usage.
-            device(~chainer.backend.Device):
+            device(~torch.device):
                 Device to which the converter is expected to send the batch.
 
         Returns: A converted batch.
@@ -62,10 +62,10 @@ def converter():
     """Decorator to make a converter.
 
     This decorator turns a converter function into a
-    :class:`chainer.dataset.Converter` class instance, which also is a
-    callable.
+    :class:`pytorch_extensions.convert.Converter` class instance,
+    which also is a callable.
     This is required to use the converter function from an old module that
-    does not support :class:`chainer.backend.Device` instances
+    does not support :class:`torch.device` instances
     (See the **Device argument conversion** section below).
 
     .. rubric:: Requirements of the target function
@@ -73,7 +73,7 @@ def converter():
     The target converter function must accept two positional arguments:
     a batch and a device, and return a converted batch.
 
-    The type of the device argument is :class:`chainer.backend.Device`.
+    The type of the device argument is :class:`torch.device`.
 
     The types and values of the batches (the first argument and the return
     value) are not specified: they depend on how the converter is used (e.g.
@@ -81,17 +81,17 @@ def converter():
 
     .. admonition:: Example
 
-        >>> @chainer.dataset.converter()
+        >>> @pytorch_extensions.training.convert.converter()
         ... def custom_converter(batch, device):
-        ...     assert isinstance(device, chainer.backend.Device)
+        ...     assert isinstance(device, torch.device)
         ...     # do something with batch...
-        ...     return device.send(batch)
+        ...     return batch.to(device)
 
     .. rubric:: Device argument conversion
 
     For backward compatibility, the decorator wraps
     the function so that if the converter is called with the device argument
-    with ``int`` type, it is converted to a :class:`chainer.backend.Device`
+    with ``int`` type, it is converted to a :class:`torch.device`
     instance before calling the original function. The ``int`` value indicates
     the CUDA device of the cupy backend.
 
@@ -109,36 +109,28 @@ def converter():
 
 def _call_converter(converter, batch, device):
     # Calls the converter.
-    # Converter can be either new-style (accepts chainer.backend.Device) or
+    # Converter can be either new-style (accepts torch.device) or
     # old-style (accepts int as device).
     assert device is None or isinstance(device, torch.device)
 
     if isinstance(converter, Converter):
         # New-style converter
         return converter(batch, device)
-    print(batch, device)
     return converter(batch, device)
 
 
 def to_device(device, x):
     """Send an array to a given device.
 
-    This method sends a given array to a given device. This method is used in
-    :func:`~chainer.dataset.concat_examples`.
+    This method sends a given array to a given device.
     You can also use this method in a custom converter method used in
-    :class:`~chainer.training.Updater` and :class:`~chainer.training.Extension`
-    such as :class:`~chainer.training.updaters.StandardUpdater` and
-    :class:`~chainer.training.extensions.Evaluator`.
-
-    See also :func:`chainer.dataset.concat_examples`.
+    :class:`~pytorch_extensions.training.Extension`
+    such as :class:`~pytorch_extensions.training.extensions.Evaluator`.
 
     Args:
-        device (None or int or device specifier): A device to which an array
-            is sent. If it is a negative integer, an array is sent to CPU.
-            If it is a positive integer, an array is sent to GPU with the
-            given ID. If it is``None``, an array is left in the original
-            device. Also, any of device specifiers described at
-            :class:`~chainer.backend.DeviceId` is accepted.
+        device (None or str or :class:`torch.device`): A device to
+            which an array is sent. If it is``None``, an array
+            is left in the original device.
         x (:ref:`ndarray`): An array to send.
 
     Returns:
@@ -149,12 +141,12 @@ def to_device(device, x):
 
     if device is None:
         return x
-    return device.send(x)
+    return x.to(device)
 
 
 def _get_device(device_spec):
-    # Converts device specificer to a chainer.Device instance.
-    # Additionally to chainer.get_device, this function supports None
+    # Converts device specificer to a torch.device instance.
+    # this function supports None
     if device_spec is None:
         return None
     return torch.device(device_spec)
@@ -162,4 +154,4 @@ def _get_device(device_spec):
 
 @converter()
 def transfer_data(batch, device):
-    return [elem.to(device) for elem in batch]
+    return tuple([elem.to(device) for elem in batch])

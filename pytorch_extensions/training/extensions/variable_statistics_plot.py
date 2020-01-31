@@ -1,4 +1,3 @@
-from __future__ import division
 import os
 import warnings
 
@@ -134,15 +133,15 @@ percentile_sigmas=(0, 0.13, 2.28, 15.87, 50, 84.13, 97.72, 99.87, 100), \
 trigger=(1, 'epoch'), filename='statistics.png', figsize=None, marker=None, \
 grid=True)
 
-    Trainer extension to plot statistics for :class:`~chainer.Variable`\\s.
+    An extension to plot statistics for :class:`~torch.Tensor`\\s.
 
 
-    This extension collects statistics for a single :class:`Variable`, a list
-    of :class:`Variable`\\s or similarly a single or a list of
-    :class:`Link`\\s containing one or more :class:`Variable`\\s. In case
-    multiple :class:`Variable`\\s are found, the means are computed. The
-    collected statistics are plotted and saved as an image in the directory
-    specified by the :class:`Trainer`.
+    This extension collects statistics for a single :class:`torch.Tensor`,
+    a list of :class:`torch.Tensor`\\s or similarly a single or a list of
+    :class:`torch.nn.Module`\\s containing one or more
+    :class:`torch.Tensor`\\s.  In case multiple :class:`torch.Tensor`\\s
+    are found, the means are computed. The collected statistics are plotted
+    and saved as an image in the directory specified by the :class:`Manager`.
 
     Statistics include mean, standard deviation and percentiles.
 
@@ -153,8 +152,8 @@ grid=True)
     sample with equal probability.
 
     Args:
-        targets (:class:`Variable`, :class:`Link` or list of either):
-            Parameters for which statistics are collected.
+        targets (:class:`torch.Tensor`, :class:`torch.nn.Module`
+             or list of either): Parameters for which statistics are collected.
         max_sample_size (int):
             Maximum number of running samples.
         report_data (bool):
@@ -252,10 +251,10 @@ grid=True)
         _check_available()
         return _available
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         if self.available():
             # Dynamically import pyplot to call matplotlib.use()
-            # after importing chainer.training.extensions
+            # after importing pytorch_extensions.training.extensions
             import matplotlib.pyplot as plt
         else:
             return
@@ -281,10 +280,10 @@ grid=True)
                         numpy.atleast_1d(stat_dict['percentile']))
                 stats[i] = numpy.concatenate(stat_list, axis=0)
 
-        self._samples.add(stats, idx=trainer.updater.iteration)
+        self._samples.add(stats, idx=manager.updater.iteration)
 
-        if self._trigger(trainer):
-            file_path = os.path.join(trainer.out, self._filename)
+        if self._trigger(manager):
+            file_path = os.path.join(manager.out, self._filename)
             self.save_plot_using_module(file_path, plt)
 
     def save_plot_using_module(self, file_path, plt):

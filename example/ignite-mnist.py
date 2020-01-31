@@ -90,7 +90,8 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     models = {'main': model}
     optimizers = {'main': optimizer}
     manager = pte.training.IgniteExtensionsManager(
-        trainer, models, optimizers, args.epochs, my_extensions)
+        trainer, models, optimizers, args.epochs,
+        extensions=my_extensions)
 
     # Lets load the snapshot
     if args.snapshot is not None:

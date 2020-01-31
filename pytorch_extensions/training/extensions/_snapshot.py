@@ -65,7 +65,7 @@ def _find_latest_snapshot(fmt, path):
     return None
 
 
-def _find_stale_snapshots(fmt, path, num_retain):
+def _find_stale_snapshots(fmt, path, n_retains):
     """Finds stale snapshots in a directory, retaining several files
 
     Args:
@@ -74,18 +74,18 @@ def _find_stale_snapshots(fmt, path, num_retain):
             only examined. Also, files' staleness is judged
             by timestamps. The default is metime.
         path (str): a directory path to search for snapshot files.
-        num_retain (int): Number of snapshot files to retain
+        n_retains (int): Number of snapshot files to retain
             through the cleanup. Must be a positive integer for any cleanup to
             take place.
 
     Returns:
         Generator that yields stale files that matches format
         ``fmt`` directly under ``path`` and with older ``mtime``,
-        excluding newest ``num_retain`` files.
+        excluding newest ``n_retains`` files.
 
     """
     snapshot_files = _find_snapshot_files(fmt, path)
-    num_remove = len(snapshot_files) - num_retain
+    num_remove = len(snapshot_files) - n_retains
     if num_remove > 0:
         for _, filename in snapshot_files[:num_remove]:
             yield filename
@@ -95,9 +95,9 @@ def _find_stale_snapshots(fmt, path, num_retain):
 def snapshot_object(target, filename, savefun=None, **kwargs):
     """snapshot_object(target, filename, savefun=None, \
 *, condition=None, writer=None, snapshot_on_error=False, \
-num_retain=-1, autoload=False)
+n_retains=-1, autoload=False)
 
-    Returns a trainer extension to take snapshots of a given object.
+    Returns an extension to take snapshots of a given object.
 
     This extension serializes the given object and saves it to the output
     directory.
@@ -105,7 +105,7 @@ num_retain=-1, autoload=False)
     This extension is called once per epoch by default. To take a
     snapshot at a different interval, a trigger object specifying the
     required interval can be passed along with this extension
-    to the `extend()` method of the trainer.
+    to the `extend()` method of the manager.
 
     The default priority is -100, which is lower than that of most
     built-in extensions.
@@ -113,7 +113,7 @@ num_retain=-1, autoload=False)
     Args:
         target: Object to serialize.
         filename (str): Name of the file into which the object is serialized.
-            It can be a format string, where the trainer object is passed to
+            It can be a format string, where the manager object is passed to
             the :meth:`str.format` method. For example,
             ``'snapshot_{.updater.iteration}'`` is converted to
             ``'snapshot_10000'`` at the 10,000th iteration.
@@ -129,12 +129,12 @@ num_retain=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~chainer.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_extensions.training.extensions.snapshot_writers.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
-        snapshot_on_error (bool): Whether to take a snapshot in case trainer
-            loop has been failed.
-        num_retain (int): Number of snapshot files to retain
+        snapshot_on_error (bool): Whether to take a snapshot in case training
+            loop has failed.
+        n_retains (int): Number of snapshot files to retain
             through the cleanup. Must be a positive integer for any cleanup to
             take place. Automatic deletion of old snapshots only works when the
             filename is string.
@@ -147,7 +147,7 @@ num_retain=-1, autoload=False)
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot`
+        - :meth:`pytorch_extensions.training.extensions.snapshot`
     """
 
     return snapshot(target=target, filename=filename, savefun=savefun,
@@ -158,18 +158,18 @@ def snapshot(savefun=None,
              filename='snapshot_iter_{.updater.iteration}', **kwargs):
     """snapshot(savefun=None, filename='snapshot_iter_{.updater.iteration}', \
 *, target=None, condition=None, writer=None, snapshot_on_error=False, \
-num_retain=-1, autoload=False)
+n_retains=-1, autoload=False)
 
-    Returns a trainer extension to take snapshots of the trainer.
+    Returns an extension to take snapshots of the manager.
 
-    This extension serializes the trainer object and saves it to the output
+    This extension serializes the manager object and saves it to the output
     directory. It is used to support resuming the training loop from the saved
     state.
 
     This extension is called once per epoch by default. To take a
     snapshot at a different interval, a trigger object specifying the
     required interval can be passed along with this extension
-    to the `extend()` method of the trainer.
+    to the `extend()` method of the manager.
 
     The default priority is -100, which is lower than that of most
     built-in extensions.
@@ -181,15 +181,15 @@ num_retain=-1, autoload=False)
        output directory.
 
     Args:
-        savefun: Function to save the trainer. It takes two arguments: the
-            output file path and the trainer object.
-            It is :meth:`chainer.serializers.save_npz` by default.
+        savefun: Function to save the manager. It takes two arguments: the
+            output file path and the manager object.
+            It is :meth:`torch.save` by default.
             If ``writer`` is specified, this argument must be ``None``.
-        filename (str): Name of the file into which the trainer is serialized.
-            It can be a format string, where the trainer object is passed to
+        filename (str): Name of the file into which the manager is serialized.
+            It can be a format string, where the manager object is passed to
             the :meth:`str.format` method.
         target: Object to serialize. If it is not specified, it will
-            be the trainer object.
+            be the manager object.
         condition: Condition object. It must be a callable object that returns
             boolean without any arguments. If it returns ``True``, the snapshot
             will be done.
@@ -200,12 +200,12 @@ num_retain=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~chainer.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_extensions.training.extensions.snapshot_writers.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
-        snapshot_on_error (bool): Whether to take a snapshot in case trainer
+        snapshot_on_error (bool): Whether to take a snapshot in case training
             loop has been failed.
-        num_retain (int): Number of snapshot files to retain
+        n_retains (int): Number of snapshot files to retain
             through the cleanup. Must be a positive integer for any cleanup to
             take place. Automatic deletion of old snapshots only works when the
             filename is string.
@@ -213,7 +213,7 @@ num_retain=-1, autoload=False)
             automatically finds the latest snapshot and loads the data
             to the target.  Automatic loading only works when the
             filename is a string. It is assumed that snapshots are generated
-            by :func:`chainer.serializers.save_npz` .
+            by :func:`torch.save` .
 
     Returns:
         Snapshot extension object.
@@ -221,55 +221,56 @@ num_retain=-1, autoload=False)
     .. testcode::
        :hide:
 
-       from chainer import training
-       class Model(chainer.Link):
+       from pytorch_extensions import training
+       class Model(torch.nn.Module):
            def __call__(self, x):
                return x
-       train_iter = chainer.iterators.SerialIterator([], 1)
-       optimizer = optimizers.SGD().setup(Model())
-       updater = training.updaters.StandardUpdater(
-           train_iter, optimizer, device=0)
-       trainer = training.Trainer(updater)
+
+       model = Model()
+       models = {'main': model}
+       manager = training.ExtensionsManager(models, {}, 1, [])
 
     .. admonition:: Using asynchronous writers
 
         By specifying ``writer`` argument, writing operations can be made
         asynchronous, hiding I/O overhead of snapshots.
 
-        >>> from chainer.training import extensions
+        >>> from pytorch_extensions.training import extensions
         >>> writer = extensions.snapshot_writers.ProcessWriter()
-        >>> trainer.extend(extensions.snapshot(writer=writer), \
+        >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
-        To change the format, such as npz or hdf5, you can pass a saving
+        To change the format, you can pass a saving
         function as ``savefun`` argument of the writer.
 
-        >>> from chainer.training import extensions
-        >>> from chainer import serializers
+        >>> from pytorch_extensions.training import extensions
         >>> writer = extensions.snapshot_writers.ProcessWriter(
-        ...     savefun=serializers.save_npz)
-        >>> trainer.extend(extensions.snapshot(writer=writer), \
+        ...     savefun=torch.save)
+        >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
     This is the list of built-in snapshot writers.
 
-        - :class:`chainer.training.extensions.snapshot_writers.SimpleWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.ThreadWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.ProcessWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.\
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+SimpleWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+ThreadWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
+ProcessWriter`
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
 ThreadQueueWriter`
-        - :class:`chainer.training.extensions.snapshot_writers.\
+        - :class:`pytorch_extensions.training.extensions.snapshot_writers.\
 ProcessQueueWriter`
 
     .. seealso::
 
-        - :meth:`chainer.training.extensions.snapshot_object`
+        - :meth:`pytorch_extensions.training.extensions.snapshot_object`
     """
-    target, condition, writer, snapshot_on_error, num_retain,\
+    target, condition, writer, snapshot_on_error, n_retains,\
         autoload = argument.parse_kwargs(
             kwargs,
             ('target', None), ('condition', None), ('writer', None),
-            ('snapshot_on_error', False), ('num_retain', -1),
+            ('snapshot_on_error', False), ('n_retains', -1),
             ('autoload', False))
     argument.assert_kwargs_empty(kwargs)
 
@@ -284,7 +285,7 @@ ProcessQueueWriter`
 
     return _Snapshot(
         target=target, condition=condition, writer=writer, filename=filename,
-        snapshot_on_error=snapshot_on_error, num_retain=num_retain,
+        snapshot_on_error=snapshot_on_error, n_retains=n_retains,
         autoload=autoload)
 
 
@@ -293,7 +294,7 @@ def _always_true():
 
 
 class _Snapshot(extension.Extension):
-    """Trainer extension to take snapshots.
+    """An extension to take snapshots.
 
     This extension serializes the given object and saves it to the output
     directory.
@@ -301,7 +302,7 @@ class _Snapshot(extension.Extension):
     This extension is called once per epoch by default. To take a
     snapshot at a different interval, a trigger object specifying the
     required interval can be passed along with this extension
-    to the `extend()` method of the trainer.
+    to the `extend()` method of the manager.
 
     The default priority is -100, which is lower than that of most
     built-in extensions.
@@ -312,7 +313,7 @@ class _Snapshot(extension.Extension):
     def __init__(
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
-            snapshot_on_error=False, num_retain=-1, autoload=False):
+            snapshot_on_error=False, n_retains=-1, autoload=False):
         if condition is None:
             condition = _always_true
         if writer is None:
@@ -322,18 +323,18 @@ class _Snapshot(extension.Extension):
         self.condition = condition
         self.writer = writer
         self._snapshot_on_error = snapshot_on_error
-        self.num_retain = num_retain
+        self.n_retains = n_retains
         self.autoload = autoload
 
-    def initialize(self, trainer):
-        target = trainer if self._target is None else self._target
-        outdir = trainer.out
+    def initialize(self, manager):
+        target = manager if self._target is None else self._target
+        outdir = manager.out
         if self.autoload:
             # If ``autoload`` is on, this code scans the ``outdir``
             # for potential snapshot files by matching the file names
             # from ``filename`` format, picks up the latest one in
             # terms of mtime, and tries to load it it the target or
-            # trainer.
+            # manager.
             filename = _find_latest_snapshot(self.filename, outdir)
             if filename is None:
                 print('No snapshot file that matches {} was found'
@@ -349,41 +350,41 @@ class _Snapshot(extension.Extension):
                 target.load_state_dict(state)
 
         if (hasattr(self.writer, '_add_cleanup_hook')
-                and self.num_retain > 0
+                and self.n_retains > 0
                 and isinstance(self.filename, str)):
             # This block sets a method to automatic cleanup of stale
-            # snapshots, when ``num_retain`` argument is positive
+            # snapshots, when ``n_retains`` argument is positive
             # number. When the given snapshot writer is Chainer's
             # built-in writer, a cleanup method that is to be
             # triggered right after creation of new snapshot file, is
             # injected here.
             def _cleanup():
                 files = _find_stale_snapshots(self.filename, outdir,
-                                              self.num_retain)
+                                              self.n_retains)
                 for file in files:
                     os.remove(os.path.join(outdir, file))
 
             self.writer._add_cleanup_hook(_cleanup)
 
-    def on_error(self, trainer, exc, tb):
-        super(_Snapshot, self).on_error(trainer, exc, tb)
+    def on_error(self, manager, exc, tb):
+        super(_Snapshot, self).on_error(manager, exc, tb)
         if self._snapshot_on_error:
-            self._make_snapshot(trainer)
+            self._make_snapshot(manager)
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         if self.condition():
-            self._make_snapshot(trainer)
+            self._make_snapshot(manager)
 
-    def _make_snapshot(self, trainer):
-        target = trainer if self._target is None else self._target
+    def _make_snapshot(self, manager):
+        target = manager if self._target is None else self._target
         # We need to get a dictionary with the sate here
         serialized_target = target.state_dict()
         filename = self.filename
         if callable(filename):
-            filename = filename(trainer)
+            filename = filename(manager)
         else:
-            filename = filename.format(trainer)
-        outdir = trainer.out
+            filename = filename.format(manager)
+        outdir = manager.out
         self.writer(filename, outdir, serialized_target)
 
     def finalize(self):

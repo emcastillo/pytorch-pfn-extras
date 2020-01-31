@@ -18,22 +18,22 @@ except AttributeError:
         _get_time = time.time
 
 
-class FoolUpdater(object):
+class FoolUpdater:
 
-    def __init__(self, iteration, epoch_size):
-        self.iteration = iteration
-        self.epoch_size = epoch_size
+    def __init__(self, start_iteration, iters_per_epoch):
+        self.iteration = start_iteration
+        self._iters_per_epoch = iters_per_epoch
 
     @property
     def epoch(self):
-        return self.iteration // self.epoch_size
+        return self.iteration // self._iters_per_epoch
 
     @property
     def epoch_detail(self):
-        return self.iteration / self.epoch_size
+        return self.iteration / self._iters_per_epoch
 
 
-class _ExtensionEntry(object):
+class _ExtensionEntry:
 
     def __init__(self, extension, priority, trigger, call_before_training):
         self.extension = extension
@@ -56,10 +56,13 @@ class _ExtensionEntry(object):
             self.trigger.load_state_dict(to_load['trigger'])
 
 
-class ExtensionsManager(object):
+class _BaseExtensionsManager:
     """
     Keeps track of the extensions and the current status
     """
+
+    updater = None
+
     def __init__(
             self,
             models,
@@ -67,6 +70,8 @@ class ExtensionsManager(object):
             max_epochs,
             extensions,
             out_dir='result'):
+        if extensions is None:
+            extensions = []
         self.stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
         self.observation = {}
         self.out = out_dir
@@ -84,7 +89,6 @@ class ExtensionsManager(object):
         self._optimizers = optimizers
         self.max_epochs = max_epochs
         self._start_iteration = 0
-        self.updater = FoolUpdater(0, 0)
         # Defer!
         self._start_time = None
         self._extensions = collections.OrderedDict()
@@ -97,7 +101,11 @@ class ExtensionsManager(object):
 
     @property
     def is_before_training(self):
-        return self.updater.iteration == 0
+        return self.updater is None or self.updater.iteration == 0
+
+    def _prepare_for_training(self, start_iteration, iters_per_epoch):
+        assert self.updater is None
+        self.updater = FoolUpdater(start_iteration, iters_per_epoch)
 
     def start_extensions(self):
         exts = self._extensions
@@ -123,7 +131,7 @@ class ExtensionsManager(object):
 
     def extend(self, extension, name=None, trigger=None, priority=None,
                *, call_before_training=False, **kwargs):
-        """Registers an extension to the trainer.
+        """Registers an extension to the manager.
 
         :class:`Extension` is a callable object which is called after each
         update unless the corresponding trigger object decides to skip the
@@ -212,27 +220,6 @@ class ExtensionsManager(object):
             if entry.trigger(self):
                 entry.extension(self)
 
-    @contextlib.contextmanager
-    def run_iteration(self, **kwargs):
-        iteration = kwargs.pop('iteration') + self._start_iteration
-        epoch_size = kwargs.pop('epoch_size')
-        # To fool the extensions to believe there is an updater
-        self.updater.iteration = iteration
-        self.updater.epoch_size = epoch_size
-        if self._start_time is None:
-            self._start_time = _get_time()
-            self.start_extensions()
-        self.observation = {}
-        with self.reporter.scope(self.observation):
-            try:
-                yield
-            finally:
-                # In chainer, the iteration count was increased
-                # just before calling the extensions, we need
-                # to keep the semantics
-                self.updater.iteration += 1
-                self.run_extensions()
-
     def state_dict(self):
         to_save = {}
         if self.updater is not None:
@@ -249,7 +236,9 @@ class ExtensionsManager(object):
         return to_save
 
     def load_state_dict(self, to_load):
-        self._start_iteration = to_load['state']['iteration']
+        self._start_iteration = to_load['_start_iteration']
+        if self.updater is not None:
+            self.updater.iteration = self._start_iteration
         for name in self._models:
             self._models[name].load_state_dict(to_load['models'][name])
 
@@ -261,14 +250,56 @@ class ExtensionsManager(object):
                 to_load['extensions'][name])
 
 
-class IgniteExtensionsManager(ExtensionsManager):
+class ExtensionsManager(_BaseExtensionsManager):
+    """
+    Keeps track of the extensions and the current status
+    """
+
+    def __init__(
+            self,
+            models,
+            optimizers,
+            max_epochs,
+            *,
+            extensions=None,
+            iters_per_epoch,
+            out_dir='result'):
+        super().__init__(
+            models, optimizers, max_epochs, extensions, out_dir)
+        if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
+            raise ValueError(
+                'iters_per_epoch must be an integer >= 1 ({} given)'.format(
+                    iters_per_epoch))
+        self._prepare_for_training(0, iters_per_epoch)
+
+    @contextlib.contextmanager
+    def run_iteration(self):
+        assert self.updater is not None
+        if self._start_time is None:
+            self._start_time = _get_time()
+            self.start_extensions()
+
+        self.observation = {}
+        with self.reporter.scope(self.observation):
+            try:
+                yield
+            finally:
+                # In chainer, the iteration count was increased
+                # just before calling the extensions, we need
+                # to keep the semantics
+                self.updater.iteration += 1
+                self.run_extensions()
+
+
+class IgniteExtensionsManager(_BaseExtensionsManager):
     def __init__(
             self,
             engine,
             models,
             optimizers,
             max_epochs,
-            extensions,
+            *,
+            extensions=None,
             out_dir='result'):
         super().__init__(models, optimizers, max_epochs, extensions, out_dir)
         self.engine = engine
@@ -285,18 +316,17 @@ class IgniteExtensionsManager(ExtensionsManager):
 
         @self.engine.on(Events.STARTED)
         def set_training_started(engine):
-            self.engine.state.iteration = self._start_iteration
+            start_iteration = self._start_iteration
+            self.engine.state.iteration = start_iteration
             self._start_time = _get_time()
-            epoch_size = len(self.engine.state.dataloader)
-            self.updater = FoolUpdater(self.engine.state.iteration,
-                                       epoch_size)
+            iters_per_epoch = len(engine.state.dataloader)
+            self._prepare_for_training(start_iteration, iters_per_epoch)
             self.start_extensions()
             # Make all the next
             # handlers to be executed after user defined ones
             @self.engine.on(Events.ITERATION_COMPLETED)
             def run_extensions_on_iter(engine):
-                self.updater = FoolUpdater(self.engine.state.iteration,
-                                           epoch_size)
+                self.updater.iteration = engine.state.iteration
                 self.run_extensions()
 
             # This should be the last extension to be run
@@ -306,6 +336,11 @@ class IgniteExtensionsManager(ExtensionsManager):
 
     def state_dict(self):
         to_save = super().state_dict()
-        to_save['state'] = {'iteration': self.engine.state.iteration,
-                            'epoch': self.engine.state.epoch}
+        to_save['_start_epoch'] = self.engine.state.epoch
+        to_save['_start_iteration'] = self.engine.state.iteration
         return to_save
+
+    def load_state_dict(self, to_load):
+        super().load_state_dict(to_load)
+        self.engine.state.epoch = self._start_epoch
+        self.engine.state.iteration = self._start_iteration

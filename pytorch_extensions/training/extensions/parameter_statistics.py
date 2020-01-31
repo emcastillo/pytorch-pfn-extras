@@ -18,15 +18,15 @@ _default_statistics = {
 
 
 class ParameterStatistics(extension.Extension):
-    """Trainer extension to report parameter statistics.
+    """An extension to report parameter statistics.
 
-    Statistics are collected and reported for a given :class:`~chainer.Link`
-    or an iterable of :class:`~chainer.Link`\\ s. If a link contains child
-    links, the statistics are reported separately for each child.
+    Statistics are collected and reported for a given :class:`~torch.nn.Module`
+    or an iterable of :class:`~torch.nn.Module`\\ s. If a link contains child
+    modules, the statistics are reported separately for each child.
 
-    Any function that takes a one-dimensional :class:`numpy.ndarray` or a
-    :class:`cupy.ndarray` and outputs a single or multiple real numbers can be
-    registered to handle the collection of statistics, e.g.
+    Any function that takes a one-dimensional :class:`torch.Tensor`
+    and outputs a single or multiple real numbers can be registered to
+    handle the collection of statistics, e.g.
     :meth:`numpy.ndarray.mean`.
 
     The keys of reported statistics follow the convention of link name
@@ -36,7 +36,7 @@ class ParameterStatistics(extension.Extension):
     function return multiple values.
 
     Args:
-        links (~chainer.Link or iterable of ~chainer.Link): Link(s) containing
+        links (instance or iterable of ~torch.nn.Module): Module(s) containing
             the parameters to observe. The link is expected to have a ``name``
             attribute which is used as a part of the report key.
         statistics (dict or 'default'): Dictionary with function name to
@@ -105,7 +105,7 @@ class ParameterStatistics(extension.Extension):
         self._summary = reporter.DictSummary()
         self._skip_nan_params = skip_nan_params
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         """Execute the statistics extension.
 
         Collect statistics for the current state of parameters.
@@ -115,8 +115,8 @@ class ParameterStatistics(extension.Extension):
         will also be reported and then reset for the next accumulation.
 
         Args:
-            trainer (~chainer.training.Trainer): Associated trainer that
-                invoked this extension.
+            manager (~pytorch_extensions.training.ExtensionsManager):
+                Associated manager that invoked this extension.
         """
         statistics = {}
 
@@ -152,7 +152,7 @@ class ParameterStatistics(extension.Extension):
 
         self._summary.add(statistics)
 
-        if self._trigger(trainer):
+        if self._trigger(manager):
             reporter.report(self._summary.compute_mean())
             self._summary = reporter.DictSummary()  # Clear summary
 

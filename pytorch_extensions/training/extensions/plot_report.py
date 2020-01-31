@@ -38,11 +38,11 @@ class PlotReport(extension.Extension):
 y_keys, x_key='iteration', trigger=(1, 'epoch'), postprocess=None, \
 filename='plot.png', marker='x', grid=True)
 
-    Trainer extension to output plots.
+    An extension to output plots.
 
-    This extension accumulates the observations of the trainer to
-    :class:`~chainer.DictSummary` at a regular interval specified by a supplied
-    trigger, and plot a graph with using them.
+    This extension accumulates the observations of the manager to
+    :class:`~pytorch_extensions.reporter.DictSummary` at a regular
+    interval specified by a supplied trigger, and plot a graph with using them.
 
     There are two triggers to handle this extension. One is the trigger to
     invoke this extension, which is used to handle the timing of accumulating
@@ -60,17 +60,18 @@ filename='plot.png', marker='x', grid=True)
 
         If your environment needs to specify a backend of matplotlib
         explicitly, please call ``matplotlib.use`` before calling
-        ``trainer.run``. For example:
+        ``manager.run_iteration``. For example:
 
         .. code-block:: python
 
             import matplotlib
             matplotlib.use('Agg')
 
-            trainer.extend(
+            manager.extend(
                 extensions.PlotReport(['main/loss', 'validation/main/loss'],
                                       'epoch', filename='loss.png'))
-            trainer.run()
+            with manager.run_iteration():
+                pass
 
         Then, once one of instances of this extension is called,
         ``matplotlib.use`` will have no effect.
@@ -130,16 +131,16 @@ filename='plot.png', marker='x', grid=True)
         _check_available()
         return _available
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         if self.available():
             # Dynamically import pyplot to call matplotlib.use()
-            # after importing chainer.training.extensions
+            # after importing pytorch_extensions.training.extensions
             import matplotlib.pyplot as plt
         else:
             return
 
         keys = self._y_keys
-        observation = trainer.observation
+        observation = manager.observation
         summary = self._summary
 
         if keys is None:
@@ -147,13 +148,13 @@ filename='plot.png', marker='x', grid=True)
         else:
             summary.add({k: observation[k] for k in keys if k in observation})
 
-        if trainer.is_before_training or self._trigger(trainer):
+        if manager.is_before_training or self._trigger(manager):
             stats = self._summary.compute_mean()
             stats_cpu = {}
             for name, value in six.iteritems(stats):
                 stats_cpu[name] = float(value)  # copy to CPU
 
-            updater = trainer.updater
+            updater = manager.updater
             stats_cpu['epoch'] = updater.epoch
             stats_cpu['iteration'] = updater.iteration
             x = stats_cpu[self._x_key]
@@ -182,7 +183,7 @@ filename='plot.png', marker='x', grid=True)
                     self._postprocess(f, a, summary)
                 leg = a.legend(
                     bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-                f.savefig(path.join(trainer.out, self._file_name),
+                f.savefig(path.join(manager.out, self._file_name),
                           bbox_extra_artists=(leg,), bbox_inches='tight')
 
             plt.close()

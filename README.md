@@ -51,8 +51,7 @@ for epoch in range(max_epoch):
     for iter in range(epoch_size):
         # Needs the total iters as in chainer
         current_it = epoch*epoch_size+iter
-        with manager.run_iteration(
-                epoch=epoch, iteration=current_it, epoch_size=epoch_size):
+        with manager.run_iteration(iteration=current_it, epoch_size=epoch_size):
             reporter.report({'loss': iter/100+epoch})
             time.sleep(0.001)
 ```
