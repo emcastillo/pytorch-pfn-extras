@@ -6,7 +6,7 @@ import torch
 
 class LazyInitializationMixin:
 
-    r"""A mixin for modules that lazily initialize buffers and parameters.
+    """A mixin for modules that lazily initialize buffers and parameters.
 
     Unlike regular modules, subclasses of this module can initialize
     buffers and parameters outside of the constructor (`__init__`).
@@ -48,7 +48,7 @@ class LazyInitializationMixin:
 
     @property
     def lazy_parmeters_determined(self):
-        r"""Returns if all lazy parameters are determined.
+        """Returns if all lazy parameters are determined.
 
         Subclasses can perform parameters initialization after all lazy
         parameters are determined.  Note that this may be called during
