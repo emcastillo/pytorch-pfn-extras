@@ -93,7 +93,7 @@ def test_on_error():
     assert not os.path.exists(filename)
     with pytest.raises(AttributeError):
         with trainer.run_iteration(
-                epoch=0, iteration=1, epoch_size=1):
+                iteration=0, epoch_size=1):
             pass
     assert not os.path.exists(filename)
 
