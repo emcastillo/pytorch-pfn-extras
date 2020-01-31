@@ -5,7 +5,6 @@ import six
 
 import torch
 from pytorch_extensions import reporter as reporter_module
-from pytorch_extensions.training import convert
 from pytorch_extensions.training import extension
 from pytorch_extensions.training.extensions import util
 
@@ -65,7 +64,6 @@ class Evaluator(extension.Extension):
         The interface can change in the future.
 
     Attributes:
-        converter: Converter function.
         device: Device to which the validation data is sent.
         eval_hook: Function to prepare for each evaluation process.
         eval_func: Evaluation function called at each iteration.
@@ -77,8 +75,8 @@ class Evaluator(extension.Extension):
 
     name = None
 
-    def __init__(self, iterator, target, converter=convert.transfer_data,
-                 device=None, eval_hook=None, eval_func=None, **kwargs):
+    def __init__(self, iterator, target, device=None, eval_hook=None,
+                 eval_func=None, **kwargs):
         progress_bar = kwargs.get('progress_bar', False)
 
         if isinstance(iterator, torch.utils.data.DataLoader):
@@ -89,7 +87,6 @@ class Evaluator(extension.Extension):
             target = {'main': target}
         self._targets = target
 
-        self.converter = converter
         self.device = device
         self.eval_hook = eval_hook
         self.eval_func = eval_func
@@ -177,16 +174,14 @@ class Evaluator(extension.Extension):
         with _in_eval_mode(self._targets.values()):
             for idx, batch in enumerate(iterator):
                 updater.current_position = idx
-                in_arrays = convert._call_converter(
-                        self.converter, batch, self.device)
                 observation = {}
                 with reporter_module.report_scope(observation):
-                    if isinstance(in_arrays, tuple):
-                        eval_func(*in_arrays)
-                    elif isinstance(in_arrays, dict):
-                        eval_func(**in_arrays)
+                    if isinstance(batch, (tuple, list)):
+                        eval_func(*batch)
+                    elif isinstance(batch, dict):
+                        eval_func(**batch)
                     else:
-                        eval_func(in_arrays)
+                        eval_func(batch)
                 summary.add(observation)
 
                 if self._progress_bar:
