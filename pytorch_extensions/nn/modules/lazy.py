@@ -31,8 +31,8 @@ class LazyInitializationMixin:
 
     # Subclasses must override these fields and list names of all buffers /
     # parameters that will be initialized lazily.
-    _lazy_buffer_keys = []
-    _lazy_parameter_keys = []
+    _lazy_buffer_keys = ()
+    _lazy_parameter_keys = ()
 
     def __init__(self, *args, **kwargs):
         self._lazy_ready = False
