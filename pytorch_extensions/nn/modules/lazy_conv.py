@@ -9,7 +9,7 @@ class _LazyConvNd(LazyInitializationMixin):
     _lazy_parameter_keys = ('weight',)
 
     def __init__(self, in_channels, *args, **kwargs):
-        super(_LazyConvNd, self).__init__(
+        super().__init__(
             0 if in_channels is None else in_channels, *args, **kwargs)
         if in_channels is None:
             self.in_channels = None
@@ -26,13 +26,13 @@ class _LazyConvNd(LazyInitializationMixin):
                          *self.kernel_size)
             self.weight = torch.nn.Parameter(self.weight.new_empty(*shape))
             self.reset_parameters()
-        return super(_LazyConvNd, self).forward(input)
+        return super().forward(input)
 
     def reset_parameters(self):
         # Defer initialization of parameters until shape of all parameters
         # are ready.
         if self.lazy_parmeters_determined:
-            super(_LazyConvNd, self).reset_parameters()
+            super().reset_parameters()
 
 
 class LazyConv1d(_LazyConvNd, torch.nn.Conv1d):
