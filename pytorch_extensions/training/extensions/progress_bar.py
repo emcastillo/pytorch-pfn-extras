@@ -32,12 +32,12 @@ class ProgressBar(extension.Extension):
         self._update_interval = update_interval
         self._bar_length = bar_length
         self._out = out
-        self._pbar = None
+        self._pbar = _TrainerProgressBar(
+            self._training_length, self._bar_length, self._out)
 
     def __call__(self, trainer):
-        if self._pbar is None:
-            self._pbar = _TrainerProgressBar(
-                trainer, self._training_length, self._bar_length, self._out)
+        if self._pbar.trainer is None:
+            self._pbar.trainer = trainer
 
         iteration = trainer.updater.iteration
         # print the progress bar
@@ -50,14 +50,16 @@ class ProgressBar(extension.Extension):
 
 class _TrainerProgressBar(util.ProgressBar):
 
-    def __init__(self, trainer, training_length, bar_length, out):
+    def __init__(self, training_length, bar_length, out):
         super(_TrainerProgressBar, self).__init__(out)
-        self.trainer = trainer
         self.training_length = training_length
         self.bar_length = bar_length
         self.updater_template = None
+        self.trainer = None
 
     def get_lines(self):
+        assert self.trainer is not None
+
         lines = []
 
         iteration = self.trainer.updater.iteration
