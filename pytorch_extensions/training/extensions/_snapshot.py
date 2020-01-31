@@ -3,7 +3,6 @@ import os
 import torch
 import torch.distributed
 
-from pytorch_extensions import argument
 from pytorch_extensions.training import extension
 from pytorch_extensions.training.extensions import snapshot_writers
 
@@ -108,7 +107,7 @@ n_retains=-1, autoload=False)
     required interval can be passed along with this extension
     to the `extend()` method of the manager.
 
-    The default priority is -100, which is lower than that of most
+    The default priority is lower than that of most
     built-in extensions.
 
     Args:
@@ -142,6 +141,8 @@ n_retains=-1, autoload=False)
         autoload (bool): With this enabled, the extension automatically
             finds the latest snapshot and loads the data to the target.
             Automatic loading only works when the filename is a string.
+        saver_rank (int): If defined, the snapshot will be taken by only one
+            rank when running in distributed mode and restored by all.
 
     Returns:
         Snapshot extension object.
@@ -156,10 +157,18 @@ n_retains=-1, autoload=False)
 
 
 def snapshot(savefun=None,
-             filename='snapshot_iter_{.updater.iteration}', **kwargs):
+             filename='snapshot_iter_{.updater.iteration}',
+             *,
+             target=None,
+             condition=None,
+             writer=None,
+             snapshot_on_error=False,
+             n_retains=-1,
+             autoload=False,
+             saver_rank=None):
     """snapshot(savefun=None, filename='snapshot_iter_{.updater.iteration}', \
 *, target=None, condition=None, writer=None, snapshot_on_error=False, \
-n_retains=-1, autoload=False)
+n_retains=-1, autoload=False, saver_rank=None)
 
     Returns an extension to take snapshots of the manager.
 
@@ -268,14 +277,6 @@ ProcessQueueWriter`
 
         - :meth:`pytorch_extensions.training.extensions.snapshot_object`
     """
-    target, condition, writer, snapshot_on_error, n_retains,\
-        autoload, saver_rank = argument.parse_kwargs(
-            kwargs,
-            ('target', None), ('condition', None), ('writer', None),
-            ('snapshot_on_error', False), ('n_retains', -1),
-            ('autoload', False), ('saver_rank', None))
-    argument.assert_kwargs_empty(kwargs)
-
     if savefun is not None and writer is not None:
         raise TypeError(
             'savefun and writer arguments cannot be specified together.')
@@ -314,7 +315,7 @@ class _Snapshot(extension.Extension):
     built-in extensions.
     """
     trigger = 1, 'epoch'
-    priority = -100
+    priority = extension.PRIORITY_SNAPSHOT
 
     def __init__(
             self, target=None, condition=None, writer=None,
@@ -409,29 +410,32 @@ class _DistributedSnapshot(_Snapshot):
     required interval can be passed along with this extension
     to the `extend()` method of the trainer.
 
-    The default priority is -100, which is lower than that of most
+    The default priority is lower than that of most
     built-in extensions.
     """
     trigger = 1, 'epoch'
-    priority = -100
+    priority = extension.PRIORITY_SNAPSHOT
 
     def __init__(
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
-            snapshot_on_error=False, num_retain=-1, autoload=False,
+            snapshot_on_error=False, n_retains=-1, autoload=False,
             saver_rank=0):
         super().__init__(target, condition, writer, filename,
-                         snapshot_on_error, num_retain,
+                         snapshot_on_error, n_retains,
                          autoload)
         # To support distributed snapshots
         self._saver_rank = saver_rank
         self._size, self._rank, self._local_rank = _get_ranks_from_env()
+        if not (0 <= saver_rank < self._size):
+            raise ValueError('Distributed snapshot requires a saver rank'
+                             ' in the range [0-{})'.format(self._size))
 
     def __call__(self, trainer):
         if self.condition():
             # on distributed environments only the designed rank
             # saves the snapshot
-            if self._size > 1 and self._rank != self._saver_rank:
+            if self._rank != self._saver_rank:
                 torch.distributed.barrier()
                 return
             self._make_snapshot(trainer)
