@@ -64,7 +64,6 @@ class Evaluator(extension.Extension):
         The interface can change in the future.
 
     Attributes:
-        device: Device to which the validation data is sent.
         eval_hook: Function to prepare for each evaluation process.
         eval_func: Evaluation function called at each iteration.
 
@@ -75,8 +74,8 @@ class Evaluator(extension.Extension):
 
     name = None
 
-    def __init__(self, iterator, target, device=None, eval_hook=None,
-                 eval_func=None, **kwargs):
+    def __init__(
+            self, iterator, target, eval_hook=None, eval_func=None, **kwargs):
         progress_bar = kwargs.get('progress_bar', False)
 
         if isinstance(iterator, torch.utils.data.DataLoader):
@@ -87,7 +86,6 @@ class Evaluator(extension.Extension):
             target = {'main': target}
         self._targets = target
 
-        self.device = device
         self.eval_hook = eval_hook
         self.eval_func = eval_func
         self._progress_bar = progress_bar

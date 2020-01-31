@@ -99,18 +99,15 @@ def test_current_report(evaluator_dummies):
     assert reporter.observation == mean
 
 
-@pytest.mark.parametrize('device', [None, 'cpu', 'cuda'])
-def test_evaluator_tuple_data(device):
+def test_evaluator_tuple_data():
     batches = [
         (numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f'),
          numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f'))
         for _ in range(2)]
 
-    device = None if device is None else torch.device(device)
     data_loader = torch.utils.data.DataLoader(batches)
     target = DummyModelTwoArgs()
-    evaluator = pte.training.extensions.Evaluator(
-        data_loader, target, device=device)
+    evaluator = pte.training.extensions.Evaluator(data_loader, target)
 
     reporter = pte.reporter.Reporter()
     reporter.add_observer('target', target)
