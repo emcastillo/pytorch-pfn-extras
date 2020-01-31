@@ -14,18 +14,18 @@ manager = None
 
 
 class Net(nn.Module):
-    def __init__(self, no_lazy):
+    def __init__(self, lazy):
         super(Net, self).__init__()
-        if no_lazy:
-            self.conv1 = nn.Conv2d(1, 20, 5, 1)
-            self.conv2 = nn.Conv2d(20, 50, 5, 1)
-            self.fc1 = nn.Linear(4*4*50, 500)
-            self.fc2 = nn.Linear(500, 10)
-        else:
+        if lazy:
             self.conv1 = pte.nn.LazyConv2d(None, 20, 5, 1)
             self.conv2 = pte.nn.LazyConv2d(None, 50, 5, 1)
             self.fc1 = pte.nn.LazyLinear(None, 500)
             self.fc2 = pte.nn.LazyLinear(None, 10)
+        else:
+            self.conv1 = nn.Conv2d(1, 20, 5, 1)
+            self.conv2 = nn.Conv2d(20, 50, 5, 1)
+            self.fc1 = nn.Linear(4*4*50, 500)
+            self.fc2 = nn.Linear(500, 10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
