@@ -27,13 +27,14 @@ def _create_distributed_model(gpu=True):
     return model
 
 
-def get_trainer_with_mock_updater():
+def get_trainer_with_mock_updater(path):
     epochs = 10  # FIXME
     model = _create_distributed_model()
     optimizer = torch.optim.SGD(model.parameters(), lr=1.0)
     optimizers = {'main': optimizer}
     models = {'main': model}
-    return training.ExtensionsManager(models, optimizers, epochs, [])
+    return training.ExtensionsManager(
+        models, optimizers, epochs, iters_per_epoch=1, out_dir=path)
 
 
 def _init_distributed(use_cuda):
@@ -83,11 +84,10 @@ def test_distributed_snapshot(path):
     fmt = 'snapshot_iter_{.updater.iteration}'
     snapshot = extensions.snapshot(filename=fmt, saver_rank=saver_rank)
 
-    trainer = get_trainer_with_mock_updater()
-    trainer.out = path
+    trainer = get_trainer_with_mock_updater(path)
     trainer.extend(snapshot, trigger=(1, 'iteration'), priority=2)
     for i in range(1):
-        with trainer.run_iteration(iteration=i, epoch_size=1):
+        with trainer.run_iteration():
             pass
     assert 1 == trainer.updater.iteration
     pattern = os.path.join(trainer.out, "snapshot_iter_*")
@@ -96,7 +96,7 @@ def test_distributed_snapshot(path):
     assert comm_rank == saver_rank and len(found) == 1 or len(found) == 0
 
     if comm_rank == saver_rank:
-        new_trainer = get_trainer_with_mock_updater()
+        new_trainer = get_trainer_with_mock_updater(path)
         new_trainer.load_state_dict(torch.load(os.path.join(path, found[0])))
         assert _model_params_equal(
             trainer._models['main'], new_trainer._models['main'])

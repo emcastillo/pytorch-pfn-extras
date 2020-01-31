@@ -166,11 +166,8 @@ def snapshot(savefun=None,
              n_retains=-1,
              autoload=False,
              saver_rank=None):
-    """snapshot(savefun=None, filename='snapshot_iter_{.updater.iteration}', \
-*, target=None, condition=None, writer=None, snapshot_on_error=False, \
-n_retains=-1, autoload=False, saver_rank=None)
-
-    Returns an extension to take snapshots of the manager.
+    """
+    Returns a trainer extension to take snapshots of the trainer.
 
     This extension serializes the manager object and saves it to the output
     directory. It is used to support resuming the training loop from the saved
@@ -435,10 +432,8 @@ class _DistributedSnapshot(_Snapshot):
         if self.condition():
             # on distributed environments only the designed rank
             # saves the snapshot
-            if self._rank != self._saver_rank:
-                torch.distributed.barrier()
-                return
-            self._make_snapshot(trainer)
+            if self._rank == self._saver_rank:
+                self._make_snapshot(trainer)
             if self._size > 1:
                 torch.distributed.barrier()
 
