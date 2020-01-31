@@ -5,8 +5,9 @@ import pytorch_extensions as pe
 
 def test_run():
     max_epochs = 10
-    epoch_size = 10
-    manager = pe.training.ExtensionsManager({}, [], max_epochs, [])
+    iters_per_epoch = 10
+    manager = pe.training.ExtensionsManager(
+        {}, {}, max_epochs, iters_per_epoch=iters_per_epoch)
 
     out = io.StringIO()
     extension = pe.training.extensions.ProgressBar(
@@ -18,12 +19,10 @@ def test_run():
     manager.extend(extension)
 
     for epoch in range(max_epochs):
-        for batch_idx in range(epoch_size):
-            cur_it = epoch * epoch_size + batch_idx
-            with manager.run_iteration(
-                    iteration=cur_it, epoch_size=epoch_size):
-                if cur_it < 2:
+        for batch_idx in range(iters_per_epoch):
+            with manager.run_iteration():
+                if manager.updater.iteration < 2:
                     continue
                 status = '{} iter, {} epoch / {} epochs'.format(
-                    cur_it, epoch, max_epochs)
+                    manager.updater.iteration, epoch, max_epochs)
                 assert status in out.getvalue()
