@@ -1,3 +1,4 @@
+import inspect
 import warnings
 
 import torch
@@ -98,7 +99,9 @@ class UninitializedParameter(torch.nn.Parameter):
         # This overrides `is_leaf` attribute which should always be `True`
         # for parameters; optimizers check for this attribute and raise an
         # error if non-leaf tensors are detected.
-        warnings.warn('''
-    Use of uninitialized lazy parameter has been detected.
+        frame = inspect.currentframe()
+        if frame.f_back.f_globals['__package__'].startswith('torch.optim'):
+            warnings.warn('''
+    Use of uninitialized lazy parameter in Optimizer has been detected.
     Maybe you forgot to run forward before passing `module.parameters()` to the optimizer?''')  # NOQA
         return True

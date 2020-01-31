@@ -114,6 +114,13 @@ class LazyTestBase(object):
         assert expected.shape == actual.shape
         assert (expected == actual).all()
 
+    def test_lazy_warning(self):
+        m = self.get_lazy_module()
+        with pytest.warns(UserWarning) as record:
+            torch.optim.SGD(m.parameters(), lr=0.1)
+        assert ('Use of uninitialized lazy parameter in Optimizer '
+                'has been detected' in record[0].message.args[0])
+
     @pytest.mark.parametrize('init_src, init_dst', [
         (True, True),
         (True, False),
