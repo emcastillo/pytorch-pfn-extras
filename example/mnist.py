@@ -120,6 +120,8 @@ def main():
 
     model = Net(args.no_lazy)
     if not args.no_lazy:
+        # You need to run a dummy forward to initialize parameters.
+        # This should be done before passing parameter list to optimizers.
         dummy_input = train_loader.dataset[0][0].unsqueeze(0)
         model(dummy_input)
     model.to(device)
