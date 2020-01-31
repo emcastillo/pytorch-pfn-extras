@@ -3,7 +3,7 @@ from pytorch_extensions.training import extension
 
 class ExponentialShift(extension.Extension):
 
-    """Trainer extension to exponentially shift an optimizer attribute.
+    """An extension to exponentially shift an optimizer attribute.
 
     This extension exponentially increases or decreases the specified attribute
     of the optimizer. The typical use case is an exponential decay of the
@@ -39,7 +39,7 @@ class ExponentialShift(extension.Extension):
         self._last_value = None
         self._param_group = param_group
 
-    def initialize(self, trainer):
+    def initialize(self, manager):
         optimizer = self._optimizer
         # ensure that _init is set
         if self._init is None:
@@ -50,7 +50,7 @@ class ExponentialShift(extension.Extension):
         else:
             self._update_value(optimizer, self._init)
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         self._t += 1
 
         optimizer = self._optimizer

@@ -36,12 +36,13 @@ class ManualScheduleTrigger(object):
         self._previous_iteration = 0
         self._previous_epoch_detail = 0.
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         """Decides whether the extension should be called on this iteration.
 
         Args:
-            trainer (Trainer): Trainer object that this trigger is associated
-                with. The updater associated with this trainer is used to
+            manager (~pytorch_extensions.training.ExtensionsManager):
+                Manager object that this trigger is associated with.
+                The updater associated with this manager is used to
                 determine if the trigger should fire.
 
         Returns:
@@ -49,7 +50,7 @@ class ManualScheduleTrigger(object):
             iteration.
 
         """
-        updater = trainer.updater
+        updater = manager.updater
         if self.unit == 'epoch':
             epoch_detail = updater.epoch_detail
             previous_epoch_detail = self._previous_epoch_detail

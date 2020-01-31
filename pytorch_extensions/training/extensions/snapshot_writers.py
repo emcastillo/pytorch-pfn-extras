@@ -154,7 +154,7 @@ class StandardWriter(Writer):
         Args:
             filename (str): Name of the file into which the serialized target
                 is saved. It is already formated string.
-            outdir (str): Output directory. Passed by `trainer.out`.
+            outdir (str): Output directory. Passed by `manager.out`.
             target (dict): Serialized object which will be saved.
             kwds: Keyword arguments for the ``savefun``.
 

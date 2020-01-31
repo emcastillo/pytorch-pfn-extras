@@ -13,8 +13,8 @@ class TimeTrigger(object):
         self._period = period
         self._next_time = self._period
 
-    def __call__(self, trainer):
-        if self._next_time < trainer.elapsed_time:
+    def __call__(self, manager):
+        if self._next_time < manager.elapsed_time:
             self._next_time += self._period
             return True
         else:

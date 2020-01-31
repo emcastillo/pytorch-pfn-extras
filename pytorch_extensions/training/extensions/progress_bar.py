@@ -7,7 +7,7 @@ from pytorch_extensions.training.extensions import util
 
 class ProgressBar(extension.Extension):
 
-    """Trainer extension to print a progress bar and recent training updater.
+    """An extension to print a progress bar and recent training updater.
 
     This extension prints a progress bar at every call. It watches the current
     iteration and epoch to print the bar.
@@ -15,7 +15,7 @@ class ProgressBar(extension.Extension):
     Args:
         training_length (tuple or None): Length of whole training. It consists
             of an integer and either ``'epoch'`` or ``'iteration'``. If this
-            value is omitted and the stop trigger of the trainer is
+            value is omitted and the stop trigger of the manager is
             :class:`IntervalTrigger`, this extension uses its attributes to
             determine the length of the training.
         update_interval (int): Number of iterations to skip printing the
@@ -31,14 +31,14 @@ class ProgressBar(extension.Extension):
         self._update_interval = update_interval
         self._bar_length = bar_length
         self._out = out
-        self._pbar = _TrainerProgressBar(
+        self._pbar = _ManagerProgressBar(
             self._training_length, self._bar_length, self._out)
 
-    def __call__(self, trainer):
-        if self._pbar.trainer is None:
-            self._pbar.trainer = trainer
+    def __call__(self, manager):
+        if self._pbar.manager is None:
+            self._pbar.manager = manager
 
-        iteration = trainer.updater.iteration
+        iteration = manager.updater.iteration
         # print the progress bar
         if iteration % self._update_interval == 0:
             self._pbar.update()
@@ -47,25 +47,25 @@ class ProgressBar(extension.Extension):
         self._pbar.close()
 
 
-class _TrainerProgressBar(util.ProgressBar):
+class _ManagerProgressBar(util.ProgressBar):
 
     def __init__(self, training_length, bar_length, out):
-        super(_TrainerProgressBar, self).__init__(out)
+        super(_ManagerProgressBar, self).__init__(out)
         self.training_length = training_length
         self.bar_length = bar_length
         self.updater_template = None
-        self.trainer = None
+        self.manager = None
 
     def get_lines(self):
-        assert self.trainer is not None
+        assert self.manager is not None
 
         lines = []
 
-        iteration = self.trainer.updater.iteration
-        epoch = self.trainer.updater.epoch_detail
+        iteration = self.manager.updater.iteration
+        epoch = self.manager.updater.epoch_detail
 
         if self.training_length is None:
-            t = self.trainer.stop_trigger
+            t = self.manager.stop_trigger
             self.training_length = t.get_training_length()
         length, unit = self.training_length
 
@@ -89,7 +89,7 @@ class _TrainerProgressBar(util.ProgressBar):
             self.updater_template = (
                 '{0.iteration:10} iter, {0.epoch} epoch / %s %ss\n' %
                 self.training_length)
-        updater = self.updater_template.format(self.trainer.updater)
+        updater = self.updater_template.format(self.manager.updater)
         lines.append(updater)
 
         speed_t, speed_e = self.update_speed(iteration, epoch)
