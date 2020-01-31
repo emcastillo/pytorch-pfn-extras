@@ -86,7 +86,8 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--no-cuda', dest='cuda',
+                        action='store_false', default=True,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
@@ -94,10 +95,11 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--snapshot', type=str, default=None,
                         help='path to snapshot file')
-    parser.add_argument('--no-lazy', default=False, action='store_true',
+    parser.add_argument('--no-lazy', dest='lazy',
+                        action='store_false', default=True,
                         help='do not use lazy modules')
     args = parser.parse_args()
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    use_cuda = args.cuda and torch.cuda.is_available()
 
     torch.manual_seed(args.seed)
 
@@ -118,8 +120,8 @@ def main():
                        ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = Net(args.no_lazy)
-    if not args.no_lazy:
+    model = Net(args.lazy)
+    if args.lazy:
         # You need to run a dummy forward to initialize parameters.
         # This should be done before passing parameter list to optimizers.
         dummy_input = train_loader.dataset[0][0].unsqueeze(0)
