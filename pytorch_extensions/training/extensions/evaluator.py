@@ -236,16 +236,16 @@ class IterationStatus(object):
 
 class _IteratorProgressBar(util.ProgressBar):
 
-    def __init__(self, iterator, bar_length=None, out=None):
+    def __init__(self, iterator, bar_length=50, out=None):
         if not (hasattr(iterator, 'current_position') and
                 hasattr(iterator, 'epoch_detail')):
             raise TypeError('Iterator must have the following attributes '
                             'to enable a progress bar: '
                             'current_position, epoch_detail')
         self._iterator = iterator
+        self._bar_length = bar_length
 
-        super(_IteratorProgressBar, self).__init__(
-            bar_length=bar_length, out=out)
+        super(_IteratorProgressBar, self).__init__(out=out)
 
     def get_lines(self):
         iteration = self._iterator.current_position
