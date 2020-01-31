@@ -10,7 +10,7 @@ def _get_dummy_manager():
         {'main': model},
         [],  # optimizers
         10,  # max_epochs
-        [],  # extensions
+        iters_per_epoch=1,
     )
 
 

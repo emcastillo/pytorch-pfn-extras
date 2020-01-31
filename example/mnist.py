@@ -31,11 +31,8 @@ class Net(nn.Module):
 
 def train(manager, args, model, device, train_loader, optimizer, epoch):
     model.train()
-    epoch_size = len(train_loader)
     for batch_idx, (data, target) in enumerate(train_loader):
-        current_it = epoch * epoch_size + batch_idx
-        with manager.run_iteration(
-                iteration=current_it, epoch_size=epoch_size):
+        with manager.run_iteration():
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
@@ -136,7 +133,9 @@ def main():
     models = {'main': model}
     optimizers = {'main': optimizer}
     manager = pte.training.ExtensionsManager(
-        models, optimizers, args.epochs, my_extensions)
+        models, optimizers, args.epochs,
+        extensions=my_extensions,
+        iters_per_epoch=len(train_loader))
     # Lets load the snapshot
     if args.snapshot is not None:
         state = torch.load(args.snapshot)

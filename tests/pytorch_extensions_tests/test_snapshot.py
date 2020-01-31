@@ -20,7 +20,9 @@ def get_trainer_with_mock_updater():
     optimizer = torch.optim.SGD(model.parameters(), lr=1.0)
     optimizers = {'main': optimizer}
     models = {'main': model}
-    return training.ExtensionsManager(models, optimizers, epochs, [])
+    return training.ExtensionsManager(
+        models, optimizers, epochs,
+        iters_per_epoch=10)
 
 
 def test_call():
@@ -83,7 +85,9 @@ def test_clean_up_tempdir(remover):
 def test_on_error():
     # Will fail when accesing the dummy optimizer
     optimizers = {'main': object()}
-    trainer = training.ExtensionsManager({}, optimizers, 1, [])
+    trainer = training.ExtensionsManager(
+        {}, optimizers, 1,
+        iters_per_epoch=1)
     trainer.out = '.'
     filename = 'myfile-deadbeef.dat'
 
@@ -92,8 +96,7 @@ def test_on_error():
     trainer.extend(snapshot)
     assert not os.path.exists(filename)
     with pytest.raises(AttributeError):
-        with trainer.run_iteration(
-                iteration=0, epoch_size=1):
+        with trainer.run_iteration():
             pass
     assert not os.path.exists(filename)
 
@@ -226,8 +229,8 @@ def test_remove_stale_snapshots(path):
             os.utime(filename, (self.t, self.t))
 
     trainer.extend(TimeStampUpdater(), trigger=(1, 'iteration'))
-    for i in range(10):
-        with trainer.run_iteration(iteration=i, epoch_size=10):
+    for _ in range(10):
+        with trainer.run_iteration():
             pass
     assert 10 == trainer.updater.iteration
 

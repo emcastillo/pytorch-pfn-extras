@@ -22,7 +22,9 @@ def test_run_and_save_plot(matplotlib):
     filename = 'variable_statistics_plot_test.png'
     iterations = 2
     extension_trigger = (1, 'iteration')
-    manager = pe.training.ExtensionsManager({}, [], 2, [])
+    manager = pe.training.ExtensionsManager(
+        {}, [], 2,
+        iters_per_epoch=1)
 
     x = torch.rand(1, 2, 3)
     extension = pe.training.extensions.VariableStatisticsPlot(
@@ -35,8 +37,8 @@ def test_run_and_save_plot(matplotlib):
     # matplotlib is not installed (this is due to the difference between
     # the behavior of unittest in python2 and that in python3).
     try:
-        for i in range(iterations):
-            with manager.run_iteration(iteration=i, epoch_size=1):
+        for _ in range(iterations):
+            with manager.run_iteration():
                 pass
     finally:
         os.remove(os.path.join(manager.out, filename))
