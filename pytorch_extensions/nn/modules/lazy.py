@@ -37,7 +37,7 @@ class LazyInitializationMixin:
     def __init__(self, *args, **kwargs):
         self._lazy_ready = False
 
-        super(LazyInitializationMixin, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for key in self._lazy_buffer_keys:
             self.register_buffer(key, torch.Tensor([]))

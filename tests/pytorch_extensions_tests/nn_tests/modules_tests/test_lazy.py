@@ -13,7 +13,7 @@ from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 class _MyFunc(torch.nn.Module):
 
     def __init__(self, in_features, out_features):
-        super(_MyFunc, self).__init__()
+        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
@@ -33,7 +33,7 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
     _lazy_buffer_keys = ['const']
 
     def __init__(self, in_features, out_features):
-        super(_LazyMyFunc, self).__init__(
+        super().__init__(
             0 if in_features is None else in_features, out_features)
         if in_features is None:
             self.in_features = None
@@ -47,11 +47,11 @@ class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
             self.const = self.const.new_full((self.in_features,), 1)
             self._reset_params()
             self.to(input.device)
-        return super(_LazyMyFunc, self).forward(input)
+        return super().forward(input)
 
     def _reset_params(self):
         if self.lazy_parmeters_determined:
-            super(_LazyMyFunc, self)._reset_params()
+            super()._reset_params()
 
 
 class LazyTestBase(object):
