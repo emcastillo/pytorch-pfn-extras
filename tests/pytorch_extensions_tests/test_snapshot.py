@@ -232,7 +232,7 @@ def test_remove_stale_snapshots(path):
     for _ in range(10):
         with trainer.run_iteration():
             pass
-    assert 10 == trainer.updater.iteration
+    assert 10 == trainer.iteration
 
     pattern = os.path.join(trainer.out, "snapshot_iter_*")
     found = [os.path.basename(path) for path in glob.glob(pattern)]

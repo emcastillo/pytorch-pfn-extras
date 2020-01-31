@@ -100,6 +100,14 @@ class _BaseExtensionsManager:
         return _get_time()-self._start_time
 
     @property
+    def iteration(self):
+        return self.updater.iteration
+
+    @property
+    def epoch(self):
+        return self.updater.epoch
+
+    @property
     def is_before_training(self):
         return self.updater is None or self.updater.iteration == 0
 
