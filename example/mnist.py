@@ -15,7 +15,7 @@ manager = None
 
 class Net(nn.Module):
     def __init__(self, lazy):
-        super(Net, self).__init__()
+        super().__init__()
         if lazy:
             self.conv1 = pte.nn.LazyConv2d(None, 20, 5, 1)
             self.conv2 = pte.nn.LazyConv2d(None, 50, 5, 1)

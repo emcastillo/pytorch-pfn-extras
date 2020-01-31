@@ -69,7 +69,7 @@ class LazyInitializationMixin:
 
         See comments of ``_lazy_load_hook`` for details.
         """
-        destination = super(LazyInitializationMixin, self).state_dict(
+        destination = super().state_dict(
             *args, **kwargs)
         for name in self._lazy_parameter_names:
             if isinstance(getattr(self, name), UninitializedParameter):
