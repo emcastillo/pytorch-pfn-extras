@@ -2,8 +2,6 @@ import os
 import warnings
 
 import numpy
-import six
-
 import torch
 
 from pytorch_extensions.training import extension
@@ -64,7 +62,7 @@ def _unpack_variables(x, memo=None):
     return memo
 
 
-class Reservoir(object):
+class Reservoir:
 
     """Reservoir sample with a fixed sized buffer."""
 
@@ -91,7 +89,7 @@ class Reservoir(object):
         return idxs[sorted_args], self.data[sorted_args]
 
 
-class Statistician(object):
+class Statistician:
 
     """Helper to compute basic NumPy-like statistics."""
 
@@ -310,7 +308,7 @@ grid=True)
         n_percentile_mid_floor = n_percentile // 2
         n_percentile_odd = n_percentile % 2 == 1
 
-        for col in six.moves.range(ncols):
+        for col in range(ncols):
             row = 0
             ax = axes[row, col]
             ax.set_title(self._keys[col])  # `data` or `grad`
@@ -333,7 +331,7 @@ grid=True)
 
             if self._plot_percentile:
                 ax = axes[row, col]
-                for i in six.moves.range(n_percentile_mid_floor + 1):
+                for i in range(n_percentile_mid_floor + 1):
                     if n_percentile_odd and i == n_percentile_mid_floor:
                         # Enters at most once per sub-plot, in case there is
                         # only a single percentile to plot or when this

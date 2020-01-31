@@ -8,7 +8,7 @@ import pytorch_extensions as pte
 class DummyModel(torch.nn.Module):
 
     def __init__(self):
-        super(DummyModel, self).__init__()
+        super().__init__()
         self.args = []
 
     def forward(self, x):
@@ -19,7 +19,7 @@ class DummyModel(torch.nn.Module):
 class DummyModelTwoArgs(torch.nn.Module):
 
     def __init__(self):
-        super(DummyModelTwoArgs, self).__init__()
+        super().__init__()
         self.args = []
 
     def forward(self, x, y):
@@ -27,7 +27,7 @@ class DummyModelTwoArgs(torch.nn.Module):
         pte.reporter.report({'loss': x.sum() + y.sum()}, self)
 
 
-class DummyConverter(object):
+class DummyConverter:
 
     def __init__(self, return_values):
         self.args = []

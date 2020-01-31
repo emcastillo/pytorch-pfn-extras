@@ -58,7 +58,7 @@ if os.name == 'nt':
             os.system('cls')
 
 
-class ProgressBar(object):
+class ProgressBar:
 
     def __init__(self, out=None):
         self._out = sys.stdout if out is None else out

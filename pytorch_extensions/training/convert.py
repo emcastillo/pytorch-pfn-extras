@@ -1,7 +1,7 @@
 import torch
 
 
-class Converter(object):
+class Converter:
 
     """Base class of converters.
 

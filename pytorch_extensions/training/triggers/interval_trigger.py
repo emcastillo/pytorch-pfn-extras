@@ -1,6 +1,4 @@
-
-
-class IntervalTrigger(object):
+class IntervalTrigger:
 
     """Trigger based on a fixed interval.
 

@@ -2,7 +2,7 @@ from pytorch_extensions import reporter
 from pytorch_extensions.training import trigger_util
 
 
-class BestValueTrigger(object):
+class BestValueTrigger:
 
     """Trigger invoked when specific value becomes best.
 
@@ -91,8 +91,9 @@ class MaxValueTrigger(BestValueTrigger):
     """
 
     def __init__(self, key, trigger=(1, 'epoch')):
-        super(MaxValueTrigger, self).__init__(
-            key, lambda max_value, new_value: new_value > max_value, trigger)
+        super().__init__(
+            key,
+            lambda max_value, new_value: new_value > max_value, trigger)
 
 
 class MinValueTrigger(BestValueTrigger):
@@ -113,5 +114,6 @@ class MinValueTrigger(BestValueTrigger):
     """
 
     def __init__(self, key, trigger=(1, 'epoch')):
-        super(MinValueTrigger, self).__init__(
-            key, lambda min_value, new_value: new_value < min_value, trigger)
+        super().__init__(
+            key,
+            lambda min_value, new_value: new_value < min_value, trigger)

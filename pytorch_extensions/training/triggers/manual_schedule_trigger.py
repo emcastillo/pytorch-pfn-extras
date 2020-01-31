@@ -1,6 +1,4 @@
-
-
-class ManualScheduleTrigger(object):
+class ManualScheduleTrigger:
 
     """Trigger invoked at specified point(s) of iterations or epochs.
 

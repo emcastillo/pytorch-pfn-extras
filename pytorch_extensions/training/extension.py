@@ -3,7 +3,7 @@ PRIORITY_EDITOR = 200
 PRIORITY_READER = 100
 
 
-class Extension(object):
+class Extension:
 
     """Base class of extensions.
 

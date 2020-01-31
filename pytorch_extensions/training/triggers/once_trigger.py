@@ -1,6 +1,4 @@
-
-
-class OnceTrigger(object):
+class OnceTrigger:
 
     """Trigger based on the starting point of the iteration.
 

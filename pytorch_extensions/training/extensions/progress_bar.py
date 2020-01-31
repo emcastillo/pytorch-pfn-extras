@@ -50,7 +50,7 @@ class ProgressBar(extension.Extension):
 class _ManagerProgressBar(util.ProgressBar):
 
     def __init__(self, training_length, bar_length, out):
-        super(_ManagerProgressBar, self).__init__(out)
+        super().__init__(out)
         self.training_length = training_length
         self.bar_length = bar_length
         self.updater_template = None
