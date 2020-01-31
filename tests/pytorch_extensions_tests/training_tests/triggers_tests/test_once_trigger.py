@@ -20,7 +20,7 @@ def test_trigger(iters_per_epoch, call_on_resume, resume):
     expected = [True] + [False] * 6
     finished = [False] + [True] * 6
     manager = pte.training.ExtensionsManager(
-        {}, [], 100, [],
+        {}, [], 100,
         iters_per_epoch=iters_per_epoch)
     trigger = pte.training.triggers.OnceTrigger(call_on_resume)
     for e, f in zip(expected, finished):
@@ -38,7 +38,7 @@ def test_resumed_trigger(iters_per_epoch, call_on_resume, resume):
         expected[resume] = True
         finished[resume] = False
     manager = pte.training.ExtensionsManager(
-        {}, [], 100, [],
+        {}, [], 100,
         iters_per_epoch=iters_per_epoch)
     trigger = pte.training.triggers.OnceTrigger(call_on_resume)
     for e, f in zip(expected[:resume], finished[:resume]):
@@ -64,7 +64,7 @@ def test_trigger_sparse_call(iters_per_epoch, call_on_resume, resume):
     finished = [False] + [True] * 6
     for _ in range(10):
         manager = pte.training.ExtensionsManager(
-            {}, [], 100, [],
+            {}, [], 100,
             iters_per_epoch=iters_per_epoch)
         trigger = pte.training.triggers.OnceTrigger(call_on_resume)
         accumulated = False

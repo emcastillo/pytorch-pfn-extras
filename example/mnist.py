@@ -137,7 +137,8 @@ def main():
     models = {'main': model}
     optimizers = {'main': optimizer}
     manager = pte.training.ExtensionsManager(
-        models, optimizers, args.epochs, my_extensions,
+        models, optimizers, args.epochs,
+        extensions=my_extensions,
         iters_per_epoch=len(train_loader))
     # Lets load the snapshot
     if args.snapshot is not None:

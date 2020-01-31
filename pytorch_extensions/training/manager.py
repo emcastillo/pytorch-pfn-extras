@@ -69,8 +69,9 @@ class _BaseExtensionsManager:
             optimizers,
             max_epochs,
             extensions,
-            *,
             out_dir='result'):
+        if extensions is None:
+            extensions = []
         self.stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
         self.observation = {}
         self.out = out_dir
@@ -259,13 +260,12 @@ class ExtensionsManager(_BaseExtensionsManager):
             models,
             optimizers,
             max_epochs,
-            extensions,
             *,
+            extensions=None,
             iters_per_epoch,
             out_dir='result'):
         super().__init__(
-            models, optimizers, max_epochs, extensions,
-            out_dir=out_dir)
+            models, optimizers, max_epochs, extensions, out_dir)
         if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
             raise ValueError(
                 'iters_per_epoch must be an integer >= 1 ({} given)'.format(
@@ -298,7 +298,8 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             models,
             optimizers,
             max_epochs,
-            extensions,
+            *,
+            extensions=None,
             out_dir='result'):
         super().__init__(models, optimizers, max_epochs, extensions, out_dir)
         self.engine = engine

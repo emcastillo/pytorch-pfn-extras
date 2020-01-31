@@ -9,7 +9,7 @@ def test_run():
     data_total = numpy.random.randint(7, 32, size=data_shape)
     data_correct = numpy.random.randint(data_total + 1)
     manager = pe.training.ExtensionsManager(
-        {}, [], 100, [],
+        {}, [], 100,
         iters_per_epoch=5)
 
     extension = pe.training.extensions.MicroAverage(

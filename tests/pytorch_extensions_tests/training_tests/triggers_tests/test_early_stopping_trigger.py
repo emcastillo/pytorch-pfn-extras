@@ -6,7 +6,7 @@ import pytorch_extensions as pte
 
 def _test_trigger(trigger, key, accuracies, expected):
     manager = pte.training.ExtensionsManager(
-        {}, [], 100, [], iters_per_epoch=1)
+        {}, [], 100, iters_per_epoch=1)
     for a, e in zip(accuracies, expected):
         with manager.run_iteration():
             pass

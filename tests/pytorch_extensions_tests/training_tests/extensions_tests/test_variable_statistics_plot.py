@@ -23,7 +23,7 @@ def test_run_and_save_plot(matplotlib):
     iterations = 2
     extension_trigger = (1, 'iteration')
     manager = pe.training.ExtensionsManager(
-        {}, [], 2, [],
+        {}, [], 2,
         iters_per_epoch=1)
 
     x = torch.rand(1, 2, 3)

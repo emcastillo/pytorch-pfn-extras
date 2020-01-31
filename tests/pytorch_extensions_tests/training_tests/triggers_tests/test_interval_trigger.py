@@ -23,7 +23,7 @@ def test_trigger(iters_per_epoch, interval, expected):
     optimizers = {'main': mock.MagicMock()}
     epochs = -(-len(expected) // iters_per_epoch)
     trainer = training.ExtensionsManager(
-        {}, optimizers, epochs, [],
+        {}, optimizers, epochs,
         iters_per_epoch=iters_per_epoch)
     trigger = triggers.IntervalTrigger(*interval)
 
