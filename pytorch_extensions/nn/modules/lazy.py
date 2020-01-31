@@ -31,18 +31,18 @@ class LazyInitializationMixin:
 
     # Subclasses must override these fields and list names of all buffers /
     # parameters that will be initialized lazily.
-    _lazy_buffer_keys = ()
-    _lazy_parameter_keys = ()
+    _lazy_buffer_names = ()
+    _lazy_parameter_names = ()
 
     def __init__(self, *args, **kwargs):
         self._lazy_ready = False
 
         super().__init__(*args, **kwargs)
 
-        for key in self._lazy_buffer_keys:
-            self.register_buffer(key, torch.Tensor([]))
-        for key in self._lazy_parameter_keys:
-            self.register_parameter(key, UninitializedParameter())
+        for name in self._lazy_buffer_names:
+            self.register_buffer(name, torch.Tensor([]))
+        for name in self._lazy_parameter_names:
+            self.register_parameter(name, UninitializedParameter())
         self._register_load_state_dict_pre_hook(self._lazy_load_hook)
         self._lazy_ready = True
 
@@ -56,7 +56,7 @@ class LazyInitializationMixin:
         """
         return self._lazy_ready and all([
             not isinstance(getattr(self, x), UninitializedParameter)
-            for x in self._lazy_parameter_keys])
+            for x in self._lazy_parameter_names])
 
     def state_dict(self, *args, **kwargs):
         """Returns a dictionary containing a whole state of the module.
@@ -71,9 +71,9 @@ class LazyInitializationMixin:
         """
         destination = super(LazyInitializationMixin, self).state_dict(
             *args, **kwargs)
-        for key in self._lazy_parameter_keys:
-            if isinstance(getattr(self, key), UninitializedParameter):
-                del destination[key]
+        for name in self._lazy_parameter_names:
+            if isinstance(getattr(self, name), UninitializedParameter):
+                del destination[name]
         return destination
 
     def _lazy_load_hook(
@@ -89,25 +89,25 @@ class LazyInitializationMixin:
         See comment in ``torch.nn.Module._register_load_state_dict_pre_hook``
         for the details of the hook specification.
         """
-        for key in self._lazy_buffer_keys:
+        for name in self._lazy_buffer_names:
             # Avoid shape mismatch error when loading an initialized buffer
             # onto an uninitialized module instance.
-            self.register_buffer(key, state_dict[prefix + key])
+            self.register_buffer(name, state_dict[prefix + name])
 
-        for key in self._lazy_parameter_keys:
-            # The key may not exist in the loaded ``state_dict`` if the
+        for name in self._lazy_parameter_names:
+            # The parameter may not exist in the loaded ``state_dict`` if the
             # original module was serialized before initializing lazy
             # parameters (see comments of ``state_dict``).
-            prefix_key = prefix + key
-            if prefix_key in state_dict:
+            key = prefix + name
+            if key in state_dict:
                 # The model was serialized after initialization.
                 self.register_parameter(
-                     key, torch.nn.Parameter(state_dict[prefix_key]))
+                     name, torch.nn.Parameter(state_dict[key]))
             else:
                 # The model was serialized before initialization.
                 param = UninitializedParameter()
-                self.register_parameter(key, param)
-                state_dict[prefix_key] = param
+                self.register_parameter(name, param)
+                state_dict[key] = param
 
 
 class UninitializedParameter(torch.nn.Parameter):

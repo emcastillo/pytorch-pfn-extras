@@ -11,7 +11,7 @@ class LazyLinear(LazyInitializationMixin, torch.nn.Linear):
     the forward step.
     """
 
-    _lazy_parameter_keys = ('weight',)
+    _lazy_parameter_names = ('weight',)
 
     def __init__(self, in_features, *args, **kwargs):
         super().__init__(
