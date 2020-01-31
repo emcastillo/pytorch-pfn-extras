@@ -74,7 +74,7 @@ class _BaseExtensionsManager:
             extensions = []
         self.stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
         self.observation = {}
-        self.out = out_dir
+        self._out = out_dir
         if not os.path.exists(self.out):
             os.makedirs(self.out)
         self.reporter = Reporter()
@@ -94,6 +94,10 @@ class _BaseExtensionsManager:
         self._extensions = collections.OrderedDict()
         for ext in extensions:
             self.extend(ext)
+
+    @property
+    def out(self):
+        return self._out
 
     @property
     def elapsed_time(self):
