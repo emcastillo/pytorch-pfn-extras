@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 
 import six
@@ -85,7 +86,8 @@ class Evaluator(extension.Extension):
         self._iterators = iterator
 
         if isinstance(target, torch.nn.Module):
-            self._targets = {'main': target}
+            target = {'main': target}
+        self._targets = target
 
         self.converter = converter
         self.device = device
@@ -171,18 +173,25 @@ class Evaluator(extension.Extension):
         updater = IterationStatus(len(iterator))
         if self._progress_bar:
             pbar = _IteratorProgressBar(iterator=updater)
-        self._targets['main'].eval()
-        for idx, batch in enumerate(iterator):
-            updater.current_position = idx
-            in_arrays = convert._call_converter(
-                    self.converter, batch, self.device)
-            observation = {}
-            with reporter_module.report_scope(observation):
-                eval_func(*in_arrays)
-            summary.add(observation)
 
-            if self._progress_bar:
-                pbar.update()
+        with _in_eval_mode(self._targets.values()):
+            for idx, batch in enumerate(iterator):
+                updater.current_position = idx
+                in_arrays = convert._call_converter(
+                        self.converter, batch, self.device)
+                observation = {}
+                with reporter_module.report_scope(observation):
+                    if isinstance(in_arrays, tuple):
+                        eval_func(*in_arrays)
+                    elif isinstance(in_arrays, dict):
+                        eval_func(**in_arrays)
+                    else:
+                        eval_func(in_arrays)
+                summary.add(observation)
+
+                if self._progress_bar:
+                    pbar.update()
+
         if self._progress_bar:
             pbar.close()
 
@@ -199,6 +208,19 @@ class Evaluator(extension.Extension):
         # for iterator in six.itervalues(self._iterators):
         #     iterator.finalize()
         pass
+
+
+@contextlib.contextmanager
+def _in_eval_mode(targets):
+    targets = list(targets)
+    was_train = [t.training for t in targets]
+    try:
+        for t in targets:
+            t.eval()
+        yield
+    finally:
+        for t, was in zip(targets, was_train):
+            t.train(was)
 
 
 class IterationStatus(object):
