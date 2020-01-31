@@ -4,7 +4,7 @@ import warnings
 import torch
 
 
-class LazyInitializationMixin(object):
+class LazyInitializationMixin:
 
     r"""A mixin for modules that lazily initialize buffers and parameters.
 
