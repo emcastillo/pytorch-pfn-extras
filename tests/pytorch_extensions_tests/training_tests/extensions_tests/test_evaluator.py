@@ -27,17 +27,6 @@ class DummyModelTwoArgs(torch.nn.Module):
         pte.reporter.report({'loss': x.sum() + y.sum()}, self)
 
 
-class DummyConverter(object):
-
-    def __init__(self, return_values):
-        self.args = []
-        self.iterator = iter(return_values)
-
-    def __call__(self, batch, device):
-        self.args.append({'batch': batch, 'device': device})
-        return next(self.iterator)
-
-
 def _torch_batch_to_numpy(batch):
     # In Pytorch, a batch has the batch dimension. Squeeze it for comparison.
     assert isinstance(batch, torch.Tensor)
@@ -48,25 +37,18 @@ def _torch_batch_to_numpy(batch):
 @pytest.fixture(scope='function')
 def evaluator_dummies():
     data = [
-        numpy.random.uniform(-1, 1, (3, 4)).astype('f') for _ in range(2)]
-    batches = [
         numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')
         for _ in range(2)]
 
     data_loader = torch.utils.data.DataLoader(data)
-    converter = DummyConverter(batches)
     target = DummyModel()
-    evaluator = pte.training.extensions.Evaluator(
-        data_loader, target, converter=converter)
-    expect_mean = numpy.mean([numpy.sum(x) for x in batches])
-    return (
-        data, batches, data_loader, converter, target, evaluator, expect_mean)
+    evaluator = pte.training.extensions.Evaluator(data_loader, target)
+    expect_mean = numpy.mean([numpy.sum(x) for x in data])
+    return data, data_loader, target, evaluator, expect_mean
 
 
 def test_evaluate(evaluator_dummies):
-    (
-        data, batches, data_loader, converter, target, evaluator, expect_mean
-    ) = evaluator_dummies
+    data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
     reporter = pte.reporter.Reporter()
     reporter.add_observer('target', target)
@@ -77,19 +59,10 @@ def test_evaluate(evaluator_dummies):
     # evaluator collect results in order to calculate their mean.
     assert len(reporter.observation) == 0
 
-    # The converter gets results of the data loader.
-    assert len(converter.args) == len(data)
+    assert len(target.args) == len(data)
     for i in range(len(data)):
         numpy.testing.assert_array_equal(
-            _torch_batch_to_numpy(converter.args[i]['batch']),
-            data[i])
-        assert converter.args[i]['device'] is None
-
-    # The model gets results of converter.
-    assert len(target.args) == len(batches)
-    for i in range(len(batches)):
-        numpy.testing.assert_array_equal(
-            target.args[i], batches[i])
+            _torch_batch_to_numpy(target.args[i]), data[i])
 
     numpy.testing.assert_almost_equal(
         mean['target/loss'], expect_mean, decimal=4)
@@ -98,9 +71,7 @@ def test_evaluate(evaluator_dummies):
 
 
 def test_call(evaluator_dummies):
-    (
-        data, batches, data_loader, converter, target, evaluator, expect_mean
-    ) = evaluator_dummies
+    data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
     mean = evaluator()
     # 'main' is used by default
@@ -109,9 +80,7 @@ def test_call(evaluator_dummies):
 
 
 def test_evaluator_name(evaluator_dummies):
-    (
-        data, batches, data_loader, converter, target, evaluator, expect_mean
-    ) = evaluator_dummies
+    data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
     evaluator.name = 'eval'
     mean = evaluator()
@@ -121,9 +90,7 @@ def test_evaluator_name(evaluator_dummies):
 
 
 def test_current_report(evaluator_dummies):
-    (
-        data, batches, data_loader, converter, target, evaluator, expect_mean
-    ) = evaluator_dummies
+    data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
     reporter = pte.reporter.Reporter()
     with reporter:
@@ -132,76 +99,58 @@ def test_current_report(evaluator_dummies):
     assert reporter.observation == mean
 
 
-@pytest.mark.parametrize('device', [None, 'cpu', 'cuda'])
-def test_evaluator_tuple_data(device):
+def test_evaluator_tuple_data():
     data = [
-        numpy.random.uniform(-1, 1, (3, 4)).astype('f') for _ in range(2)]
-    batches = [
         (numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f'),
          numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f'))
         for _ in range(2)]
 
-    device = None if device is None else torch.device(device)
     data_loader = torch.utils.data.DataLoader(data)
-    converter = DummyConverter(batches)
     target = DummyModelTwoArgs()
-    evaluator = pte.training.extensions.Evaluator(
-        data_loader, target, converter=converter, device=device)
+    evaluator = pte.training.extensions.Evaluator(data_loader, target)
 
     reporter = pte.reporter.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         mean = evaluator.evaluate()
 
-    # The converter gets results of the data loader and the device number.
-    assert len(converter.args) == len(data)
-    expected_device_arg = device
-
+    assert len(target.args) == len(data)
     for i in range(len(data)):
+        assert len(target.args[i]) == len(data[i])
         numpy.testing.assert_array_equal(
-            _torch_batch_to_numpy(converter.args[i]['batch']),
-            data[i])
-        assert converter.args[i]['device'] == expected_device_arg
-
-    # The model gets results of converter.
-    assert len(target.args) == len(batches)
-    for i in range(len(batches)):
+            _torch_batch_to_numpy(target.args[i][0]), data[i][0])
         numpy.testing.assert_array_equal(
-            target.args[i], batches[i])
+            _torch_batch_to_numpy(target.args[i][1]), data[i][1])
 
-    expect_mean = numpy.mean([numpy.sum(x) for x in batches])
+    expect_mean = numpy.mean([numpy.sum(x) for x in data])
     numpy.testing.assert_almost_equal(
         mean['target/loss'], expect_mean, decimal=4)
 
 
 def test_evaluator_dict_data():
-    data = range(2)
-    batches = [
+    data = [
         {'x': numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f'),
          'y': numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')}
         for _ in range(2)]
 
     data_loader = torch.utils.data.DataLoader(data)
-    converter = DummyConverter(batches)
     target = DummyModelTwoArgs()
-    evaluator = pte.training.extensions.Evaluator(
-        data_loader, target, converter=converter)
+    evaluator = pte.training.extensions.Evaluator(data_loader, target)
 
     reporter = pte.reporter.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         mean = evaluator.evaluate()
 
-    # The model gets results of converter.
-    assert len(target.args) == len(batches)
-    for i in range(len(batches)):
+    assert len(target.args) == len(data)
+    for i in range(len(data)):
         numpy.testing.assert_array_equal(
-            target.args[i][0], batches[i]['x'])
+            _torch_batch_to_numpy(target.args[i][0]), data[i]['x'])
         numpy.testing.assert_array_equal(
-            target.args[i][1], batches[i]['y'])
+            _torch_batch_to_numpy(target.args[i][1]), data[i]['y'])
 
     expect_mean = numpy.mean(
-        [numpy.sum(x['x']) + numpy.sum(x['y']) for x in batches])
+        [numpy.sum(x['x']) + numpy.sum(x['y']) for x in data])
     numpy.testing.assert_almost_equal(
         mean['target/loss'], expect_mean, decimal=4)
 
@@ -209,27 +158,21 @@ def test_evaluator_dict_data():
 def test_evaluator_with_eval_func():
     data = [
         numpy.random.uniform(-1, 1, (3, 4)).astype('f') for _ in range(2)]
-    batches = [
-        numpy.random.uniform(-1, 1, (2, 3, 4)).astype('f')
-        for _ in range(2)]
 
-    data_loader = torch.utils.data.DataLoader(data)
-    converter = DummyConverter(batches)
+    data_loader = torch.utils.data.DataLoader(data, batch_size=1)
     target = DummyModel()
     evaluator = pte.training.extensions.Evaluator(
-        data_loader, {}, converter=converter,
-        eval_func=target)
+        data_loader, {}, eval_func=target)
 
     reporter = pte.reporter.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         evaluator.evaluate()
 
-    # The model gets results of converter.
-    assert len(target.args) == len(batches)
-    for i in range(len(batches)):
+    assert len(target.args) == len(data)
+    for i in range(len(data)):
         numpy.testing.assert_array_equal(
-            target.args[i], batches[i])
+            _torch_batch_to_numpy(target.args[i]), data[i])
 
 
 def test_evaluator_progress_bar():
