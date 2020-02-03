@@ -5,15 +5,16 @@ from pytorch_extensions.training import triggers
 from pytorch_extensions import training
 
 
-def _test_trigger(trigger, key, accuracies, expected, iter_per_epoch):
+def _test_trigger(trigger, key, accuracies, expected, iters_per_epoch):
     optimizers = {'main': mock.MagicMock()}
-    epochs = -(-len(expected) // iter_per_epoch)
-    trainer = training.ExtensionsManager({}, optimizers, epochs, [])
+    max_epochs = -(-len(expected) // iters_per_epoch)
+    trainer = training.ExtensionsManager(
+        {}, optimizers, max_epochs, iters_per_epoch=iters_per_epoch)
 
     invoked_iterations = []
 
     for it, e in enumerate([0.] + accuracies):
-        with trainer.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+        with trainer.run_iteration():
             trainer.observation = {key: accuracies[it - 1]}
             if trigger(trainer):
                 invoked_iterations.append(it)
@@ -22,7 +23,7 @@ def _test_trigger(trigger, key, accuracies, expected, iter_per_epoch):
 
 
 @pytest.mark.parametrize(
-    'trigger_type,iter_per_epoch,interval,accuracies,expected',
+    'trigger_type,iters_per_epoch,interval,accuracies,expected',
     [
         # interval = 1 iterations
         (triggers.MaxValueTrigger, 1, (1, 'iteration'),
@@ -52,7 +53,7 @@ def _test_trigger(trigger, key, accuracies, expected, iter_per_epoch):
     ]
 )
 def test_trigger(
-        trigger_type, iter_per_epoch, interval, accuracies, expected):
+        trigger_type, iters_per_epoch, interval, accuracies, expected):
     key = 'main/accuracy'
     trigger = trigger_type(key, trigger=interval)
-    _test_trigger(trigger, key, accuracies, expected, iter_per_epoch)
+    _test_trigger(trigger, key, accuracies, expected, iters_per_epoch)
