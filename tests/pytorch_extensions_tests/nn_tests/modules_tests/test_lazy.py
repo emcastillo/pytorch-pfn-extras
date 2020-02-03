@@ -28,8 +28,8 @@ class _MyFunc(torch.nn.Module):
 
 class _LazyMyFunc(LazyInitializationMixin, _MyFunc):
 
-    _lazy_parameter_names = ('weight',)
-    _lazy_buffer_names = ('const',)
+    lazy_parameter_names = ('weight',)
+    lazy_buffer_names = ('const',)
 
     def __init__(self, in_features, out_features):
         super().__init__(in_features or 0, out_features)

@@ -6,7 +6,7 @@ from pytorch_extensions.nn.modules.lazy import UninitializedParameter
 
 class _LazyConvNd(LazyInitializationMixin):
 
-    _lazy_parameter_names = ('weight',)
+    lazy_parameter_names = ('weight',)
 
     def __init__(self, in_channels, *args, **kwargs):
         super().__init__(in_channels or 0, *args, **kwargs)
