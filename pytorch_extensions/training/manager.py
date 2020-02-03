@@ -60,7 +60,10 @@ class _BaseExtensionsManager:
     """
     Keeps track of the extensions and the current status
     """
-
+    # The updater is used for compatibility with old extensions
+    # writen for Chainer.
+    # New extensions can access the current epoch and iteration
+    # directly from the manager.
     updater = None
 
     def __init__(
