@@ -8,7 +8,6 @@ from pytorch_extensions import training
 def test_fool_updater():
     updater = training.manager.FoolUpdater(9, 4)
     assert updater.iteration == 9
-    assert updater.epoch_size == 4
     assert updater.epoch == 2
     assert updater.epoch_detail == 2.25
 
@@ -38,12 +37,12 @@ def test_extensions_manager_extensions():
     model = nn.Module()
     optimizer = object()
     max_epochs = 5
-    epoch_size = 4
+    iters_per_epoch = 4
     manager = training.ExtensionsManager(
         {'model_name': model},
         {'optimizer_name': optimizer},
         max_epochs,
-        []
+        iters_per_epoch=iters_per_epoch,
     )
 
     call_record = []
@@ -72,13 +71,12 @@ def test_extensions_manager_extensions():
     with pytest.raises(ValueError):
         manager.get_extension('ext10')
 
-    for it in range(max_epochs * epoch_size):
+    for it in range(max_epochs * iters_per_epoch):
         call_record.clear()
         init_record.clear()
 
-        with manager.run_iteration(iteration=it, epoch_size=epoch_size):
+        with manager.run_iteration():
             assert manager.updater.iteration == it
-            assert manager.updater.epoch_size == epoch_size
 
             if it == 0:
                 assert call_record == [4, 0, 3]
@@ -126,20 +124,20 @@ def test_extensions_manager_state_dict():
     optimizer_state_dict = object()
     extension_state_dict = object()
     max_epochs = 5
-    epoch_size = 4
+    iters_per_epoch = 4
     passed_iteration = 11
     manager = training.ExtensionsManager(
         {'model_name': _StateDictModel(state_dict=model_state_dict)},
         {'optimizer_name': _StateDictObj(state_dict=optimizer_state_dict)},
         max_epochs,
-        []
+        iters_per_epoch=iters_per_epoch,
     )
     manager.extend(
         _StateDictExtension(
             state_dict=extension_state_dict), name='extension_name')
 
     for it in range(passed_iteration):
-        with manager.run_iteration(iteration=it, epoch_size=epoch_size):
+        with manager.run_iteration():
             pass
 
     state_dict = manager.state_dict()
@@ -152,7 +150,7 @@ def test_extensions_manager_state_dict():
             'extension': extension_state_dict,
             'trigger': {
                 '_previous_iteration': passed_iteration,
-                '_previous_epoch_detail': passed_iteration / epoch_size
+                '_previous_epoch_detail': passed_iteration / iters_per_epoch
             },
         }},
     }
@@ -165,7 +163,7 @@ def test_extensions_manager_state_dict():
         {'model_name': new_model},
         {'optimizer_name': new_optimizer},
         max_epochs,
-        []
+        iters_per_epoch=iters_per_epoch,
     )
     new_manager.extend(new_extension, name='extension_name')
     new_manager.load_state_dict(state_dict)
