@@ -46,12 +46,12 @@ class BestValueTrigger:
         if key in observation:
             summary.add({key: observation[key]})
 
-        if not self._interval_trigger(manager):
-            return False
-
         stats = summary.compute_mean()
         value = float(stats[key])  # copy to CPU
         self._init_summary()
+
+        if not self._interval_trigger(manager):
+            return False
 
         if self._best_value is None or self._compare(self._best_value, value):
             self._best_value = value
@@ -70,7 +70,7 @@ class BestValueTrigger:
     def load_state_dict(self, to_load):
         self._interval_trigger.load_state_dict(to_load['interval_trigger'])
         self._summary.load_state_dict(to_load['_summary'])
-        self._best_value.load_state_dict(to_load['_best_value'])
+        self._best_value = to_load['_best_value']
 
 
 class MaxValueTrigger(BestValueTrigger):

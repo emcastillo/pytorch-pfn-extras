@@ -14,7 +14,7 @@ from pytorch_extensions.training.extensions._snapshot import (
     _find_latest_snapshot, _find_snapshot_files, _find_stale_snapshots)
 
 
-def get_trainer_with_mock_updater():
+def get_trainer_with_mock_updater(*, out_dir):
     epochs = 10  # FIXME
     model = torch.nn.Linear(128, 1)
     optimizer = torch.optim.SGD(model.parameters(), lr=1.0)
@@ -22,7 +22,8 @@ def get_trainer_with_mock_updater():
     models = {'main': model}
     return training.ExtensionsManager(
         models, optimizers, epochs,
-        iters_per_epoch=10)
+        iters_per_epoch=10,
+        out_dir=out_dir)
 
 
 def test_call():
@@ -59,8 +60,7 @@ def remover():
 
 
 def test_save_file(remover):
-    trainer = get_trainer_with_mock_updater()
-    trainer.out = '.'
+    trainer = get_trainer_with_mock_updater(out_dir='.')
     trainer._done = True
     w = extensions.snapshot_writers.SimpleWriter()
     snapshot = extensions.snapshot_object(trainer, 'myfile.dat',
@@ -71,8 +71,7 @@ def test_save_file(remover):
 
 
 def test_clean_up_tempdir(remover):
-    trainer = get_trainer_with_mock_updater()
-    trainer.out = '.'
+    trainer = get_trainer_with_mock_updater(out_dir='.')
     trainer._done = True
     snapshot = extensions.snapshot_object(trainer, 'myfile.dat')
     snapshot(trainer)
@@ -87,8 +86,8 @@ def test_on_error():
     optimizers = {'main': object()}
     trainer = training.ExtensionsManager(
         {}, optimizers, 1,
-        iters_per_epoch=1)
-    trainer.out = '.'
+        iters_per_epoch=1,
+        out_dir='.')
     filename = 'myfile-deadbeef.dat'
 
     snapshot = extensions.snapshot_object(trainer, filename,
@@ -213,8 +212,7 @@ def test_remove_stale_snapshots(path):
     snapshot = extensions.snapshot(filename=fmt, n_retains=retain,
                                    autoload=False)
 
-    trainer = get_trainer_with_mock_updater()
-    trainer.out = path
+    trainer = get_trainer_with_mock_updater(out_dir=path)
     trainer.extend(snapshot, trigger=(1, 'iteration'), priority=2)
 
     class TimeStampUpdater():
@@ -232,7 +230,7 @@ def test_remove_stale_snapshots(path):
     for _ in range(10):
         with trainer.run_iteration():
             pass
-    assert 10 == trainer.updater.iteration
+    assert 10 == trainer.iteration
 
     pattern = os.path.join(trainer.out, "snapshot_iter_*")
     found = [os.path.basename(path) for path in glob.glob(pattern)]
@@ -243,8 +241,7 @@ def test_remove_stale_snapshots(path):
     expected.sort()
     assert expected == found
 
-    trainer2 = get_trainer_with_mock_updater()
-    trainer2.out = path
+    trainer2 = get_trainer_with_mock_updater(out_dir=path)
     snapshot2 = extensions.snapshot(filename=fmt, autoload=True)
     # Just making sure no error occurs
     snapshot2.initialize(trainer2)

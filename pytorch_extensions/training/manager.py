@@ -60,7 +60,10 @@ class _BaseExtensionsManager:
     """
     Keeps track of the extensions and the current status
     """
-
+    # The updater is used for compatibility with old extensions
+    # written for Chainer.
+    # New extensions can access the current epoch and iteration
+    # directly from the manager.
     updater = None
 
     def __init__(
@@ -74,7 +77,7 @@ class _BaseExtensionsManager:
             extensions = []
         self.stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
         self.observation = {}
-        self.out = out_dir
+        self._out = out_dir
         if not os.path.exists(self.out):
             os.makedirs(self.out)
         self.reporter = Reporter()
@@ -96,8 +99,20 @@ class _BaseExtensionsManager:
             self.extend(ext)
 
     @property
+    def out(self):
+        return self._out
+
+    @property
     def elapsed_time(self):
         return _get_time()-self._start_time
+
+    @property
+    def iteration(self):
+        return self.updater.iteration
+
+    @property
+    def epoch(self):
+        return self.updater.epoch
 
     @property
     def is_before_training(self):
@@ -240,6 +255,7 @@ class _BaseExtensionsManager:
         if self.updater is not None:
             self.updater.iteration = self._start_iteration
         for name in self._models:
+            # TODO(ecastill) map_loc when loading the model and DDP check
             self._models[name].load_state_dict(to_load['models'][name])
 
         for name in self._optimizers:

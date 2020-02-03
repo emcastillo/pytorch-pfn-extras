@@ -10,12 +10,18 @@ import pytorch_extensions.training.extensions as extensions
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, lazy):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
+        if lazy:
+            self.conv1 = pte.nn.LazyConv2d(None, 20, 5, 1)
+            self.conv2 = pte.nn.LazyConv2d(None, 50, 5, 1)
+            self.fc1 = pte.nn.LazyLinear(None, 500)
+            self.fc2 = pte.nn.LazyLinear(None, 10)
+        else:
+            self.conv1 = nn.Conv2d(1, 20, 5, 1)
+            self.conv2 = nn.Conv2d(20, 50, 5, 1)
+            self.fc1 = nn.Linear(4*4*50, 500)
+            self.fc2 = nn.Linear(500, 10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -73,7 +79,8 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--no-cuda', dest='cuda',
+                        action='store_false', default=True,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
@@ -81,8 +88,11 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--snapshot', type=str, default=None,
                         help='path to snapshot file')
+    parser.add_argument('--no-lazy', dest='lazy',
+                        action='store_false', default=True,
+                        help='do not use lazy modules')
     args = parser.parse_args()
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
+    use_cuda = args.cuda and torch.cuda.is_available()
 
     torch.manual_seed(args.seed)
 
@@ -103,7 +113,13 @@ def main():
                        ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = Net().to(device)
+    model = Net(args.lazy)
+    if args.lazy:
+        # You need to run a dummy forward to initialize parameters.
+        # This should be done before passing parameter list to optimizers.
+        dummy_input = train_loader.dataset[0][0].unsqueeze(0)
+        model(dummy_input)
+    model.to(device)
     optimizer = optim.SGD(
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
@@ -112,8 +128,6 @@ def main():
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),
-        extensions.ExponentialShift(
-            'lr', 0.9999, optimizer, init=0.2, target=0.1),
         extensions.observe_lr(optimizer=optimizer),
         extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),

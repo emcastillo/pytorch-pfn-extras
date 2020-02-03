@@ -1,7 +1,6 @@
 from pytorch_extensions.training.extensions import snapshot_writers  # NOQA
 from pytorch_extensions.training.extensions._snapshot import snapshot  # NOQA
 from pytorch_extensions.training.extensions._snapshot import snapshot_object  # NOQA
-from pytorch_extensions.training.extensions.exponential_shift import ExponentialShift  # NOQA
 from pytorch_extensions.training.extensions.evaluator import Evaluator, IgniteEvaluator  # NOQA
 from pytorch_extensions.training.extensions.log_report import LogReport  # NOQA
 from pytorch_extensions.training.extensions.micro_average import MicroAverage  # NOQA

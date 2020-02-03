@@ -73,8 +73,6 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),
-        extensions.ExponentialShift(
-            'lr', 0.9999, optimizer, init=0.2, target=0.1),
         extensions.observe_lr(optimizer=optimizer),
         extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),
