@@ -23,6 +23,8 @@ from pytorch_extensions.training import triggers
          [False, False, False, False, False, False, False]),
         (2, triggers.IntervalTrigger(2, 'iteration'),
          [False, True, False, True, False, True, False]),
+        (2, (lambda trainer: trainer.updater.iteration == 3),
+         [False, False, True, False, False, False, False]),
     ]
 )
 def test_get_trigger(iter_per_epoch, trigger_args, expected):
