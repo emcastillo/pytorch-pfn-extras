@@ -5,7 +5,7 @@ from pytorch_extensions import reporter
 from pytorch_extensions.training import trigger_util
 
 
-class EarlyStoppingTrigger(object):
+class EarlyStoppingTrigger:
     """__init__(\
         self, check_trigger=(1, 'epoch'), monitor='main/loss', \
         patience=3, mode='auto', verbose=False, \

@@ -1,9 +1,8 @@
-from os import path
 import json
+import os
 import warnings
 
 import numpy
-import six
 
 from pytorch_extensions import reporter
 from pytorch_extensions.training import extension
@@ -151,7 +150,7 @@ filename='plot.png', marker='x', grid=True)
         if manager.is_before_training or self._trigger(manager):
             stats = self._summary.compute_mean()
             stats_cpu = {}
-            for name, value in six.iteritems(stats):
+            for name, value in stats.items():
                 stats_cpu[name] = float(value)  # copy to CPU
 
             updater = manager.updater
@@ -183,7 +182,7 @@ filename='plot.png', marker='x', grid=True)
                     self._postprocess(f, a, summary)
                 leg = a.legend(
                     bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-                f.savefig(path.join(manager.out, self._file_name),
+                f.savefig(os.path.join(manager.out, self._file_name),
                           bbox_extra_artists=(leg,), bbox_inches='tight')
 
             plt.close()

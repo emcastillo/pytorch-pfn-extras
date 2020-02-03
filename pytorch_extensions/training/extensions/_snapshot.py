@@ -371,7 +371,7 @@ class _Snapshot(extension.Extension):
             self.writer._add_cleanup_hook(_cleanup)
 
     def on_error(self, manager, exc, tb):
-        super(_Snapshot, self).on_error(manager, exc, tb)
+        super().on_error(manager, exc, tb)
         if self._snapshot_on_error:
             self._make_snapshot(manager)
 

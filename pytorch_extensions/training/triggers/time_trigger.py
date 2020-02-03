@@ -1,4 +1,4 @@
-class TimeTrigger(object):
+class TimeTrigger:
 
     """Trigger based on a fixed time interval.
 

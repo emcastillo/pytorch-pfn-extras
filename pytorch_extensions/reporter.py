@@ -5,9 +5,8 @@ import typing as tp  # NOQA
 import warnings
 
 import numpy
-import six
-
 import torch
+
 
 _thread_local = threading.local()
 
@@ -18,7 +17,7 @@ def _copy_variable(value):
     return value
 
 
-class Reporter(object):
+class Reporter:
 
     """Object to which observed values are reported.
 
@@ -151,9 +150,7 @@ class Reporter(object):
                 name of the observed value.
 
         """
-        # if not configuration.config.keep_graph_on_report:
-        #     values = {k: _copy_variable(v) for k, v in six.iteritems(values)}
-        values = {k: _copy_variable(v) for k, v in six.iteritems(values)}
+        values = {k: _copy_variable(v) for k, v in values.items()}
 
         if observer is not None:
             observer_id = id(observer)
@@ -161,7 +158,7 @@ class Reporter(object):
                 raise KeyError(
                     'Given observer is not registered to the reporter.')
             observer_name = self._observer_names[observer_id]
-            for key, value in six.iteritems(values):
+            for key, value in values.items():
                 name = '%s/%s' % (observer_name, key)
                 self.observation[name] = value
         else:
@@ -198,7 +195,7 @@ def report(values, observer=None):
 
           class MyRegressor:
               def __init__(self, predictor):
-                  super(MyRegressor, self).__init__(predictor=predictor)
+                  super().__init__(predictor=predictor)
 
               def __call__(self, x, y):
                   # This chain just computes the mean absolute and squared
@@ -246,7 +243,7 @@ def report_scope(observation):
     current.observation = old
 
 
-class Summary(object):
+class Summary:
 
     """Online summarization of a sequence of scalars.
 
@@ -309,7 +306,7 @@ class Summary(object):
         self._n = to_load['_n']
 
 
-class DictSummary(object):
+class DictSummary:
 
     """Online summarization of a sequence of dictionaries.
 
@@ -333,7 +330,7 @@ class DictSummary(object):
 
         """
         summaries = self._summaries
-        for k, v in six.iteritems(d):
+        for k, v in d.items():
             w = 1
             if isinstance(v, tuple):
                 w = v[1]
@@ -355,7 +352,7 @@ class DictSummary(object):
 
         """
         return {name: summary.compute_mean()
-                for name, summary in six.iteritems(self._summaries)}
+                for name, summary in self._summaries.items()}
 
     def make_statistics(self):
         """Creates a dictionary of statistics.
@@ -370,7 +367,7 @@ class DictSummary(object):
 
         """
         stats = {}
-        for name, summary in six.iteritems(self._summaries):
+        for name, summary in self._summaries.items():
             mean, std = summary.make_statistics()
             stats[name] = mean
             stats[name + '.std'] = std

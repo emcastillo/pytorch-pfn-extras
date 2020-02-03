@@ -1,6 +1,5 @@
-import six
-
 import torch
+
 from pytorch_extensions import reporter
 from pytorch_extensions.training import extension
 from pytorch_extensions.training import trigger as trigger_module
@@ -123,8 +122,7 @@ class ParameterStatistics(extension.Extension):
         for link in self._links:
             for param_name, param in link.named_parameters():
                 for attr_name in self._attrs:
-                    for function_name, function in \
-                            six.iteritems(self._statistics):
+                    for function_name, function in self._statistics.items():
                         # Get parameters as a flattened one-dimensional array
                         # since the statistics function should make no
                         # assumption about the axes

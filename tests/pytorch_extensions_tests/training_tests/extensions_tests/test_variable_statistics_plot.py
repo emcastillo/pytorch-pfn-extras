@@ -3,7 +3,6 @@ import os
 import numpy
 import pytest
 import torch
-import six
 
 import pytorch_extensions as pe
 
@@ -76,7 +75,7 @@ def test_statistician_percentile():
                 percentile_sigmas=percentile_sigmas))
     stat = statistician(x, axis=None, dtype=x.dtype)
 
-    for s in six.itervalues(stat):
+    for s in stat.values():
         assert s.dtype == x.dtype
 
     assert torch.allclose(stat['mean'], torch.mean(x))

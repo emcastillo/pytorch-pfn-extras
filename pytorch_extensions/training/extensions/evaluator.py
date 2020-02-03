@@ -1,9 +1,8 @@
 import contextlib
 import datetime
 
-import six
-
 import torch
+
 from pytorch_extensions import reporter as reporter_module
 from pytorch_extensions.training import extension
 from pytorch_extensions.training.extensions import util
@@ -131,7 +130,7 @@ class Evaluator(extension.Extension):
             prefix = self.name + '/'
         else:
             prefix = ''
-        for name, target in six.iteritems(self._targets):
+        for name, target in self._targets.items():
             reporter.add_observer(prefix + name, target)
             reporter.add_observers(prefix + name,
                                    target.named_modules())
@@ -198,8 +197,6 @@ class Evaluator(extension.Extension):
         It is called at the end of training loops.
 
         """
-        # for iterator in six.itervalues(self._iterators):
-        #     iterator.finalize()
         pass
 
 
@@ -216,7 +213,7 @@ def _in_eval_mode(targets):
             t.train(was)
 
 
-class IterationStatus(object):
+class IterationStatus:
     def __init__(self, size):
         self.current_position = 0
         self._epoch_detail = 0.0
@@ -238,7 +235,7 @@ class _IteratorProgressBar(util.ProgressBar):
         self._iterator = iterator
         self._bar_length = bar_length
 
-        super(_IteratorProgressBar, self).__init__(out=out)
+        super().__init__(out=out)
 
     def get_lines(self):
         iteration = self._iterator.current_position

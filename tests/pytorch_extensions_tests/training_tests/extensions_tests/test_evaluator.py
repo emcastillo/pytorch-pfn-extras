@@ -8,7 +8,7 @@ import pytorch_extensions as pte
 class DummyModel(torch.nn.Module):
 
     def __init__(self):
-        super(DummyModel, self).__init__()
+        super().__init__()
         self.args = []
 
     def forward(self, x):
@@ -19,7 +19,7 @@ class DummyModel(torch.nn.Module):
 class DummyModelTwoArgs(torch.nn.Module):
 
     def __init__(self):
-        super(DummyModelTwoArgs, self).__init__()
+        super().__init__()
         self.args = []
 
     def forward(self, x, y):

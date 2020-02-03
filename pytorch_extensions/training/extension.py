@@ -4,7 +4,7 @@ PRIORITY_READER = 100
 PRIORITY_SNAPSHOT = -100
 
 
-class Extension(object):
+class Extension:
 
     """Base class of extensions.
 

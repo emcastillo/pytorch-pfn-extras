@@ -1,15 +1,14 @@
 import multiprocessing
 import os
+import queue
 import shutil
 import tempfile
 import threading
 
-from six.moves import queue
-
 import torch
 
 
-class Writer(object):
+class Writer:
 
     """Base class of snapshot writers.
 
@@ -99,7 +98,7 @@ class SimpleWriter(Writer):
     """
 
     def __init__(self, savefun=torch.save, **kwds):
-        super(SimpleWriter, self).__init__()
+        super().__init__()
         self._savefun = savefun
         self._kwds = kwds
 
@@ -129,7 +128,7 @@ class StandardWriter(Writer):
     _worker = None
 
     def __init__(self, savefun=torch.save, **kwds):
-        super(StandardWriter, self).__init__()
+        super().__init__()
         self._savefun = savefun
         self._kwds = kwds
         self._started = False
@@ -180,7 +179,7 @@ class ThreadWriter(StandardWriter):
     """
 
     def __init__(self, savefun=torch.save, **kwds):
-        super(ThreadWriter, self).__init__(savefun=savefun, **kwds)
+        super().__init__(savefun=savefun, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return threading.Thread(
@@ -205,7 +204,7 @@ class ProcessWriter(StandardWriter):
     """
 
     def __init__(self, savefun=torch.save, **kwds):
-        super(ProcessWriter, self).__init__(savefun=savefun, **kwds)
+        super().__init__(savefun=savefun, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return multiprocessing.Process(
@@ -240,7 +239,7 @@ class QueueWriter(Writer):
     _consumer = None
 
     def __init__(self, savefun=torch.save, task=None):
-        super(QueueWriter, self).__init__()
+        super().__init__()
         if task is None:
             self._task = self.create_task(savefun)
         else:
@@ -297,7 +296,7 @@ class ThreadQueueWriter(QueueWriter):
     """
 
     def __init__(self, savefun=torch.save, task=None):
-        super(ThreadQueueWriter, self).__init__(savefun=savefun, task=task)
+        super().__init__(savefun=savefun, task=task)
 
     def create_queue(self):
         return queue.Queue()
@@ -324,7 +323,7 @@ class ProcessQueueWriter(QueueWriter):
     """
 
     def __init__(self, savefun=torch.save, task=None):
-        super(ProcessQueueWriter, self).__init__(savefun=savefun, task=task)
+        super().__init__(savefun=savefun, task=task)
 
     def create_queue(self):
         return multiprocessing.JoinableQueue()

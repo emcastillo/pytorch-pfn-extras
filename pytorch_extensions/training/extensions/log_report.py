@@ -3,8 +3,6 @@ import os
 import shutil
 import tempfile
 
-import six
-
 from pytorch_extensions import reporter
 from pytorch_extensions.training import extension
 from pytorch_extensions.training import trigger as trigger_module
@@ -89,7 +87,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
             # output the result
             stats = self._summary.compute_mean()
             stats_cpu = {}
-            for name, value in six.iteritems(stats):
+            for name, value in stats.items():
                 stats_cpu[name] = float(value)  # copy to CPU
 
             stats_cpu['epoch'] = updater.epoch
