@@ -1,3 +1,4 @@
+import io
 import threading
 import time
 
@@ -211,7 +212,51 @@ def test_summary_weight():
     numpy.testing.assert_allclose(mean.numpy(), val)
 
 
-# TODO(niboshi): Add serialization tests
+def _check_summary_serialize(value1, value2, value3):
+    summary = pte.reporter.Summary()
+    summary.add(value1)
+    summary.add(value2)
+
+    summary2 = pte.reporter.Summary()
+    summary2.load_state_dict(summary.state_dict())
+    summary2.add(value3)
+
+    expected_mean = (value1 + value2 + value3) / 3.
+    expected_std = numpy.sqrt(
+        (value1**2 + value2**2 + value3**2) / 3. - expected_mean**2)
+
+    mean = summary2.compute_mean()
+    numpy.testing.assert_allclose(mean, expected_mean)
+
+    mean, std = summary2.make_statistics()
+    numpy.testing.assert_allclose(mean, expected_mean)
+    numpy.testing.assert_allclose(std, expected_std)
+
+
+def test_serialize_array_float():
+    _check_summary_serialize(
+        numpy.array(1.5, numpy.float32),
+        numpy.array(2.0, numpy.float32),
+        # sum of the above two is non-integer
+        numpy.array(3.5, numpy.float32))
+
+
+def test_serialize_array_int():
+    _check_summary_serialize(
+        numpy.array(1, numpy.int32),
+        numpy.array(-2, numpy.int32),
+        numpy.array(2, numpy.int32))
+
+
+def test_serialize_scalar_float():
+    _check_summary_serialize(
+        1.5, 2.0,
+        # sum of the above two is non-integer
+        3.5)
+
+
+def test_serialize_scalar_int():
+    _check_summary_serialize(1, -2, 2)
 
 
 # pte.reporter.DictSummary
@@ -284,4 +329,87 @@ def test_dict_summary_weight():
         summary.add({'a': (4., var)})
 
 
-# TODO(niboshi): Add serialization tests
+def test_dict_summary_serialize():
+    summary = pte.reporter.DictSummary()
+    summary.add({'numpy': numpy.array(3, 'f'), 'int': 1, 'float': 4.})
+    summary.add({'numpy': numpy.array(1, 'f'), 'int': 5, 'float': 9.})
+    summary.add({'numpy': numpy.array(2, 'f'), 'int': 6, 'float': 5.})
+
+    summary2 = pte.reporter.DictSummary()
+    summary2.load_state_dict(summary.state_dict())
+    summary2.add({'numpy': numpy.array(3, 'f'), 'int': 5, 'float': 8.})
+
+    _check_dict_summary(summary2, {
+        'numpy': (3., 1., 2., 3.),
+        'int': (1, 5, 6, 5),
+        'float': (4., 9., 5., 8.),
+    })
+
+
+@pytest.mark.parametrize('delimiter', ['/', '.'])
+@pytest.mark.parametrize(
+    # How the state of the summary is transferred.
+    'transfer_protocol',
+    [
+        'direct',  # Use state_dict() and load_state_dict()
+        'torch',  # Use torch.save() and torch.load()
+    ])
+def test_dict_summary_serialize_names_with_delimiter(
+        delimiter, transfer_protocol):
+    key1 = 'a{d}b'.format(d=delimiter)
+    key2 = '{d}a{d}b'.format(d=delimiter)
+    key3 = 'a{d}b{d}'.format(d=delimiter)
+    summary = pte.reporter.DictSummary()
+    summary.add({key1: 3., key2: 1., key3: 4.})
+    summary.add({key1: 1., key2: 5., key3: 9.})
+    summary.add({key1: 2., key2: 6., key3: 5.})
+
+    if transfer_protocol == 'direct':
+        summary2 = pte.reporter.DictSummary()
+        summary2.load_state_dict(summary.state_dict())
+    else:
+        assert transfer_protocol == 'torch'
+        f = io.BytesIO()
+        torch.save(summary, f)
+        summary2 = torch.load(io.BytesIO(f.getvalue()))
+    summary2.add({key1: 3., key2: 5., key3: 8.})
+
+    _check_dict_summary(summary2, {
+        key1: (3., 1., 2., 3.),
+        key2: (1., 5., 6., 5.),
+        key3: (4., 9., 5., 8.),
+    })
+
+
+def test_serialize_overwrite_different_names():
+    summary = pte.reporter.DictSummary()
+    summary.add({'a': 3., 'b': 1.})
+    summary.add({'a': 1., 'b': 5.})
+
+    summary2 = pte.reporter.DictSummary()
+    summary2.add({'c': 5.})
+    summary2.load_state_dict(summary.state_dict())
+
+    _check_dict_summary(summary2, {
+        'a': (3., 1.),
+        'b': (1., 5.),
+    })
+
+
+def test_serialize_overwrite_rollback():
+    summary = pte.reporter.DictSummary()
+    summary.add({'a': 3., 'b': 1.})
+    summary.add({'a': 1., 'b': 5.})
+
+    state = summary.state_dict()
+    summary.add({'a': 2., 'b': 6., 'c': 5.})
+    summary.add({'a': 3., 'b': 4., 'c': 6.})
+    summary.load_state_dict(state)
+
+    summary.add({'a': 3., 'b': 5., 'c': 8.})
+
+    _check_dict_summary(summary, {
+        'a': (3., 1., 3.),
+        'b': (1., 5., 5.),
+        'c': (8.,),
+    })
