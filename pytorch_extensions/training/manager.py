@@ -60,7 +60,10 @@ class _BaseExtensionsManager:
     """
     Keeps track of the extensions and the current status
     """
-
+    # The updater is used for compatibility with old extensions
+    # written for Chainer.
+    # New extensions can access the current epoch and iteration
+    # directly from the manager.
     updater = None
 
     def __init__(
@@ -102,6 +105,14 @@ class _BaseExtensionsManager:
     @property
     def elapsed_time(self):
         return _get_time()-self._start_time
+
+    @property
+    def iteration(self):
+        return self.updater.iteration
+
+    @property
+    def epoch(self):
+        return self.updater.epoch
 
     @property
     def is_before_training(self):
