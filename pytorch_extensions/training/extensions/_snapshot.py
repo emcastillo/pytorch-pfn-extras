@@ -1,8 +1,8 @@
 import os
 
 import torch
+import torch.distributed
 
-from pytorch_extensions import argument
 from pytorch_extensions.training import extension
 from pytorch_extensions.training.extensions import snapshot_writers
 
@@ -107,7 +107,7 @@ n_retains=-1, autoload=False)
     required interval can be passed along with this extension
     to the `extend()` method of the manager.
 
-    The default priority is -100, which is lower than that of most
+    The default priority is lower than that of most
     built-in extensions.
 
     Args:
@@ -141,6 +141,8 @@ n_retains=-1, autoload=False)
         autoload (bool): With this enabled, the extension automatically
             finds the latest snapshot and loads the data to the target.
             Automatic loading only works when the filename is a string.
+        saver_rank (int): If defined, the snapshot will be taken by only one
+            rank when running in distributed mode and restored by all.
 
     Returns:
         Snapshot extension object.
@@ -155,12 +157,17 @@ n_retains=-1, autoload=False)
 
 
 def snapshot(savefun=None,
-             filename='snapshot_iter_{.updater.iteration}', **kwargs):
-    """snapshot(savefun=None, filename='snapshot_iter_{.updater.iteration}', \
-*, target=None, condition=None, writer=None, snapshot_on_error=False, \
-n_retains=-1, autoload=False)
-
-    Returns an extension to take snapshots of the manager.
+             filename='snapshot_iter_{.updater.iteration}',
+             *,
+             target=None,
+             condition=None,
+             writer=None,
+             snapshot_on_error=False,
+             n_retains=-1,
+             autoload=False,
+             saver_rank=None):
+    """
+    Returns a trainer extension to take snapshots of the trainer.
 
     This extension serializes the manager object and saves it to the output
     directory. It is used to support resuming the training loop from the saved
@@ -214,7 +221,8 @@ n_retains=-1, autoload=False)
             to the target.  Automatic loading only works when the
             filename is a string. It is assumed that snapshots are generated
             by :func:`torch.save` .
-
+        saver_rank (int): If defined, the snapshot will be taken by only one
+            rank when running in distributed mode and restored by all.
     Returns:
         Snapshot extension object.
 
@@ -266,14 +274,6 @@ ProcessQueueWriter`
 
         - :meth:`pytorch_extensions.training.extensions.snapshot_object`
     """
-    target, condition, writer, snapshot_on_error, n_retains,\
-        autoload = argument.parse_kwargs(
-            kwargs,
-            ('target', None), ('condition', None), ('writer', None),
-            ('snapshot_on_error', False), ('n_retains', -1),
-            ('autoload', False))
-    argument.assert_kwargs_empty(kwargs)
-
     if savefun is not None and writer is not None:
         raise TypeError(
             'savefun and writer arguments cannot be specified together.')
@@ -282,11 +282,15 @@ ProcessQueueWriter`
         if savefun is None:
             savefun = torch.save
         writer = snapshot_writers.SimpleWriter(savefun=savefun)
-
-    return _Snapshot(
+    if saver_rank is None:
+        return _Snapshot(
+            target=target, condition=condition, writer=writer,
+            filename=filename, snapshot_on_error=snapshot_on_error,
+            n_retains=n_retains, autoload=autoload)
+    return _DistributedSnapshot(
         target=target, condition=condition, writer=writer, filename=filename,
         snapshot_on_error=snapshot_on_error, n_retains=n_retains,
-        autoload=autoload)
+        autoload=autoload, saver_rank=saver_rank)
 
 
 def _always_true():
@@ -308,7 +312,7 @@ class _Snapshot(extension.Extension):
     built-in extensions.
     """
     trigger = 1, 'epoch'
-    priority = -100
+    priority = extension.PRIORITY_SNAPSHOT
 
     def __init__(
             self, target=None, condition=None, writer=None,
@@ -390,3 +394,63 @@ class _Snapshot(extension.Extension):
     def finalize(self):
         if hasattr(self.writer, 'finalize'):
             self.writer.finalize()
+
+
+class _DistributedSnapshot(_Snapshot):
+    """Trainer extension to take snapshots.
+
+    This extension serializes the given object and saves it to the output
+    directory.
+
+    This extension is called once per epoch by default. To take a
+    snapshot at a different interval, a trigger object specifying the
+    required interval can be passed along with this extension
+    to the `extend()` method of the trainer.
+
+    The default priority is lower than that of most
+    built-in extensions.
+    """
+    trigger = 1, 'epoch'
+    priority = extension.PRIORITY_SNAPSHOT
+
+    def __init__(
+            self, target=None, condition=None, writer=None,
+            filename='snapshot_iter_{.updater.iteration}',
+            snapshot_on_error=False, n_retains=-1, autoload=False,
+            saver_rank=0):
+        super().__init__(target, condition, writer, filename,
+                         snapshot_on_error, n_retains,
+                         autoload)
+        # To support distributed snapshots
+        self._saver_rank = saver_rank
+        self._size, self._rank, self._local_rank = _get_ranks_from_env()
+        if not (0 <= saver_rank < self._size):
+            raise ValueError('Distributed snapshot requires a saver rank'
+                             ' in the range [0-{})'.format(self._size))
+
+    def __call__(self, trainer):
+        if self.condition():
+            # on distributed environments only the designed rank
+            # saves the snapshot
+            if self._rank == self._saver_rank:
+                self._make_snapshot(trainer)
+            if self._size > 1:
+                torch.distributed.barrier()
+
+
+def _get_ranks_from_env():
+    if 'OMPI_COMM_WORLD_SIZE' in os.environ:
+        # We are running Open MPI
+        comm_world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
+        comm_rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
+        comm_local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+    elif 'MV2_COMM_WORLD_SIZE' in os.environ:
+        comm_world_size = int(os.environ['MV2_COMM_WORLD_SIZE'])
+        comm_rank = int(os.environ['MV2_COMM_WORLD_RANK'])
+        comm_local_rank = int(os.environ['MV2_COMM_WORLD_LOCAL_RANK'])
+    else:
+        comm_world_size = 1
+        comm_rank = 0
+        comm_local_rank = 0
+
+    return comm_world_size, comm_rank, comm_local_rank
