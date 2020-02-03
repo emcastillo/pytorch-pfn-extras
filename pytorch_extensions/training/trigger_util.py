@@ -5,13 +5,13 @@ def get_trigger(trigger):
     """Gets a trigger object.
 
     Trigger object is a callable that accepts a
-    :class:`~pytorch_extensions.ExtensionsManager` object as an argument
-    and returns a boolean value.
+    :class:`~pytorch_extensions.training.ExtensionsManager` object
+    as an argument and returns a boolean value.
     When it returns True, various kinds of events can occur
     depending on the context in which the trigger is used. For example, if the
     trigger is passed to the
-    :meth:`~pytorch_extensions.ExtensionsManager.extend` method of
-    a trainer, then the registered extension is invoked only when the trigger
+    :meth:`~pytorch_extensions.training.ExtensionsManager.extend` method of
+    a manager, then the registered extension is invoked only when the trigger
     returns True.
 
     This function returns a trigger object based on the argument.
@@ -21,7 +21,7 @@ def get_trigger(trigger):
 
     Args:
         trigger: Trigger object. It can be either an already built trigger
-            object (i.e., a callable object that accepts a trainer object and
+            object (i.e., a callable object that accepts a manager object and
             returns a bool value), or a tuple. In latter case, the tuple is
             passed to :class:`~pytorch_extensions.triggers.IntervalTrigger`.
 
@@ -39,5 +39,5 @@ def get_trigger(trigger):
         return interval_trigger.IntervalTrigger(*trigger)
 
 
-def _never_fire_trigger(trainer):
+def _never_fire_trigger(manager):
     return False

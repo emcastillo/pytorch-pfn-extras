@@ -5,9 +5,10 @@ import pytorch_extensions as pte
 
 
 def _test_trigger(trigger, key, accuracies, expected):
-    manager = pte.training.ExtensionsManager({}, [], 100, [])
-    for it, (a, e) in enumerate(zip(accuracies, expected)):
-        with manager.run_iteration(iteration=it, epoch_size=1):
+    manager = pte.training.ExtensionsManager(
+        {}, [], 100, iters_per_epoch=1)
+    for a, e in zip(accuracies, expected):
+        with manager.run_iteration():
             pass
         manager.observation = {key: a}
         assert trigger(manager) == e

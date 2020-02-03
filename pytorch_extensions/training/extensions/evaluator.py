@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 
 import six
@@ -13,13 +14,13 @@ class Evaluator(extension.Extension):
 
     """__init__(self, iterator, target, eval_func=None, *, progress_bar=False)
 
-    Trainer extension to evaluate models on a validation set.
+    An extension to evaluate models on a validation set.
 
     This extension evaluates the current models by a given evaluation function.
     It creates a :class:`~Reporter` object to store values observed in
     the evaluation function on each iteration. The report for all iterations
     are aggregated to :class:`~DictSummary`. The collected mean values
-    are further reported to the reporter object of the trainer, where the name
+    are further reported to the reporter object of the manager, where the name
     of each observation is prefixed by the evaluator name. See
     :class:`~Reporter` for details in naming rules of the reports.
 
@@ -85,7 +86,8 @@ class Evaluator(extension.Extension):
         self._iterators = iterator
 
         if isinstance(target, torch.nn.Module):
-            self._targets = {'main': target}
+            target = {'main': target}
+        self._targets = target
 
         self.converter = converter
         self.device = device
@@ -109,19 +111,19 @@ class Evaluator(extension.Extension):
         """Returns a dictionary of all target links."""
         return dict(self._targets)
 
-    def __call__(self, trainer=None):
+    def __call__(self, manager=None):
         """Executes the evaluator extension.
 
         Unlike usual extensions, this extension can be executed without passing
-        a trainer object. This extension reports the performance on validation
+        a manager object. This extension reports the performance on validation
         dataset using the :func:`~reporter_module.report` function.
-        Thus, users can use this extension independently from any trainer
+        Thus, users can use this extension independently from any manager
         by manually configuring a :class:`~Reporter` object.
 
         Args:
-            trainer (~ExtensionsManager): Trainer object that invokes
-                this extension. It can be omitted in case of calling this
-                extension manually.
+            manager (~pytorch_extensions.training.ExtensionsManager): Manager
+                object that invokes this extension. It can be omitted
+                in case of calling this extension manually.
 
         Returns:
             dict: Result dictionary that contains mean statistics of values
@@ -171,18 +173,25 @@ class Evaluator(extension.Extension):
         updater = IterationStatus(len(iterator))
         if self._progress_bar:
             pbar = _IteratorProgressBar(iterator=updater)
-        self._targets['main'].eval()
-        for idx, batch in enumerate(iterator):
-            updater.current_position = idx
-            in_arrays = convert._call_converter(
-                    self.converter, batch, self.device)
-            observation = {}
-            with reporter_module.report_scope(observation):
-                eval_func(*in_arrays)
-            summary.add(observation)
 
-            if self._progress_bar:
-                pbar.update()
+        with _in_eval_mode(self._targets.values()):
+            for idx, batch in enumerate(iterator):
+                updater.current_position = idx
+                in_arrays = convert._call_converter(
+                        self.converter, batch, self.device)
+                observation = {}
+                with reporter_module.report_scope(observation):
+                    if isinstance(in_arrays, tuple):
+                        eval_func(*in_arrays)
+                    elif isinstance(in_arrays, dict):
+                        eval_func(**in_arrays)
+                    else:
+                        eval_func(in_arrays)
+                summary.add(observation)
+
+                if self._progress_bar:
+                    pbar.update()
+
         if self._progress_bar:
             pbar.close()
 
@@ -201,6 +210,19 @@ class Evaluator(extension.Extension):
         pass
 
 
+@contextlib.contextmanager
+def _in_eval_mode(targets):
+    targets = list(targets)
+    was_train = [t.training for t in targets]
+    try:
+        for t in targets:
+            t.eval()
+        yield
+    finally:
+        for t, was in zip(targets, was_train):
+            t.train(was)
+
+
 class IterationStatus(object):
     def __init__(self, size):
         self.current_position = 0
@@ -214,16 +236,16 @@ class IterationStatus(object):
 
 class _IteratorProgressBar(util.ProgressBar):
 
-    def __init__(self, iterator, bar_length=None, out=None):
+    def __init__(self, iterator, bar_length=50, out=None):
         if not (hasattr(iterator, 'current_position') and
                 hasattr(iterator, 'epoch_detail')):
             raise TypeError('Iterator must have the following attributes '
                             'to enable a progress bar: '
                             'current_position, epoch_detail')
         self._iterator = iterator
+        self._bar_length = bar_length
 
-        super(_IteratorProgressBar, self).__init__(
-            bar_length=bar_length, out=out)
+        super(_IteratorProgressBar, self).__init__(out=out)
 
     def get_lines(self):
         iteration = self._iterator.current_position

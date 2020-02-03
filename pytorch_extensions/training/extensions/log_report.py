@@ -15,9 +15,9 @@ class LogReport(extension.Extension):
     """__init__(\
 keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
 
-    Trainer extension to output the accumulated results to a log file.
+    An extension to output the accumulated results to a log file.
 
-    This extension accumulates the observations of the trainer to
+    This extension accumulates the observations of the manager to
     :class:`~pytorch_extensions.DictSummary` at a regular interval specified
     by a supplied trigger, and writes them into a log file in JSON format.
 
@@ -35,7 +35,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
     - ``'epoch'`` and ``'iteration'`` are the epoch and iteration counts at the
       output, respectively.
     - ``'elapsed_time'`` is the elapsed time in seconds since the training
-      begins. The value is taken from :attr:`Trainer.elapsed_time`.
+      begins. The value is taken from :attr:`ExtensionsManager.elapsed_time`.
 
     Args:
         keys (iterable of strs): Keys of values to accumulate. If this is None,
@@ -73,11 +73,11 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
 
         self._init_summary()
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         # accumulate the observations
         keys = self._keys
-        observation = trainer.observation
-        updater = trainer.updater
+        observation = manager.observation
+        updater = manager.updater
         summary = self._summary
 
         if keys is None:
@@ -85,7 +85,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
         else:
             summary.add({k: observation[k] for k in keys if k in observation})
 
-        if trainer.is_before_training or self._trigger(trainer):
+        if manager.is_before_training or self._trigger(manager):
             # output the result
             stats = self._summary.compute_mean()
             stats_cpu = {}
@@ -94,7 +94,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
 
             stats_cpu['epoch'] = updater.epoch
             stats_cpu['iteration'] = updater.iteration
-            stats_cpu['elapsed_time'] = trainer.elapsed_time
+            stats_cpu['elapsed_time'] = manager.elapsed_time
 
             if self._postprocess is not None:
                 self._postprocess(stats_cpu)
@@ -104,14 +104,14 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
             # write to the log file
             if self._log_name is not None:
                 log_name = self._log_name.format(**stats_cpu)
-                out = trainer.out
+                out = manager.out
                 with tempfile.TemporaryDirectory(
                         prefix=log_name, dir=out) as tempd:
                     path = os.path.join(tempd, 'log.json')
                     with open(path, 'w') as f:
                         json.dump(self._log, f, indent=4)
 
-                    new_path = os.path.join(trainer.out, log_name)
+                    new_path = os.path.join(manager.out, log_name)
                     shutil.move(path, new_path)
 
             # reset the summary for the next output

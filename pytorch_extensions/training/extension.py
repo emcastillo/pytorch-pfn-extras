@@ -5,9 +5,9 @@ PRIORITY_READER = 100
 
 class Extension(object):
 
-    """Base class of trainer extensions.
+    """Base class of extensions.
 
-    Extension of :class:`Trainer` is a callable object that takes the trainer
+    An extension is a callable object that takes the manager
     object as the argument. It also provides some default configurations as its
     attributes, e.g. the default trigger and the default priority. This class
     provides a set of typical default values for these attributes.
@@ -19,9 +19,9 @@ class Extension(object):
     flexibility (for example, it can have methods to configure the behavior).
     Using a lambda function allows one-line coding for simple purposes, but
     users have to specify the configurations as arguments to
-    :meth:`Trainer.extend`. For a callable not inheriting this class, the
-    default configurations of this class are used unless the user explicitly
-    specifies them in :meth:`Trainer.extend` method.
+    :meth:`ExtensionsManager.extend`. For a callable not inheriting this class,
+    the default configurations of this class are used unless the user
+    explicitly specifies them in :meth:`ExtensionsManager.extend` method.
 
     Attributes:
         trigger: Default value of trigger for this extension. It is set to
@@ -30,7 +30,7 @@ class Extension(object):
             ``PRIORITY_READER`` by default.
         ~Extension.name: Name of the extension. It is set to
             ``None`` by default. This value will be overwritten when
-            registering an extension to a trainer. See
+            registering an extension to a manager. See
             :meth:`pytorch_extensions.ExtensionsManager.extend` for details.
 
     """
@@ -48,14 +48,15 @@ class Extension(object):
         """
         return type(self).__name__
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         """Invokes the extension.
 
         Implementations should override this operator. This method is called
         at iterations which the corresponding trigger accepts.
 
         Args:
-            trainer (Trainer): Trainer object that calls this operator.
+            manager (~pytorch_extensions.training.ExtensionsManager):
+                Manager object to call this operator.
 
         """
         raise NotImplementedError(
@@ -77,15 +78,15 @@ class Extension(object):
         """
         pass
 
-    def initialize(self, trainer):
-        """Initializes up the trainer state.
+    def initialize(self, manager):
+        """Initializes up the manager state.
 
         This method is called before entering the training loop. An extension
         modifying the state of :class:`~pytorch_extensions.ExtensionsManager`
         can override this method to initialize it.
 
-        When the trainer has been restored from a snapshot, this method has to
-        recover an appropriate part of the state of the trainer.
+        When the manager has been restored from a snapshot, this method has to
+        recover an appropriate part of the state of the manager.
 
         For example, :class:`~pytorch_extensions.extensions.ExponentialShift`
         extension changes the optimizer's hyperparameter at each invocation.
@@ -96,12 +97,13 @@ class Extension(object):
         snapshot, or just setting the initial value otherwise.
 
         Args:
-            trainer (Trainer): Trainer object that runs the training loop.
+            manager (~pytorch_extensions.training.ExtensionsManager):
+                Manager object to call this extension.
 
         """
         pass
 
-    def on_error(self, trainer, exc, tb):
+    def on_error(self, manager, exc, tb):
         """Handles the error raised during training before finalization.
 
         This method is called when an exception is thrown during the
@@ -110,7 +112,8 @@ class Extension(object):
         method to handle errors.
 
         Args:
-            trainer (Trainer): Trainer object that runs the training loop.
+            manager (~pytorch_extensions.training.ExtensionsManager):
+            Manager object to call this extension.
             exc (Exception): arbitrary exception thrown during update loop.
             tb (traceback): traceback object of the exception
 
@@ -120,7 +123,7 @@ class Extension(object):
     def state_dict(self):
         """Serializes the extension state.
 
-        It is called when a trainer that owns this extension is serialized. It
+        It is called when a manager that owns this extension is serialized. It
         serializes nothing by default.
 
         """
@@ -132,12 +135,12 @@ class Extension(object):
 
 def make_extension(trigger=None, default_name=None, priority=None,
                    finalizer=None, initializer=None, on_error=None):
-    """Decorator to make given functions into trainer extensions.
+    """Decorator to make given functions into extensions.
 
     This decorator just adds some attributes to a given function. The value of
     the attributes are given by the arguments of this decorator.
 
-    See :class:`Extension` for details of trainer extensions. Most of the
+    See :class:`Extension` for details of extensions. Most of the
     default values of arguments also follow those for this class.
 
     Args:
@@ -150,7 +153,7 @@ def make_extension(trigger=None, default_name=None, priority=None,
         initializer: Initializer function of this extension. It is called at
             the beginning of the training loop.
         on_error: Error handler callback function of this extension. It is
-            called after an error is raised during the trainer loop.
+            called after an error is raised during the training loop.
 
     """
 

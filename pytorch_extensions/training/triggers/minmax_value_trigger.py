@@ -25,13 +25,13 @@ class BestValueTrigger(object):
         self._init_summary()
         self._compare = compare
 
-    def __call__(self, trainer):
+    def __call__(self, manager):
         """Decides whether the extension should be called on this iteration.
 
         Args:
-            trainer (~pytorch_extensions.trainer.ExtensionsManager):
+            manager (~pytorch_extensions.training.ExtensionsManager):
                 Manager object that this
-                trigger is associated with. The ``observation`` of this trainer
+                trigger is associated with. The ``observation`` of this manager
                 is used to determine if the trigger should fire.
 
         Returns:
@@ -40,13 +40,13 @@ class BestValueTrigger(object):
 
         """
 
-        observation = trainer.observation
+        observation = manager.observation
         summary = self._summary
         key = self._key
         if key in observation:
             summary.add({key: observation[key]})
 
-        if not self._interval_trigger(trainer):
+        if not self._interval_trigger(manager):
             return False
 
         stats = summary.compute_mean()

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import argparse
 import torch
 import torch.nn as nn
@@ -8,9 +7,6 @@ from torchvision import datasets, transforms
 
 import pytorch_extensions as pte
 import pytorch_extensions.training.extensions as extensions
-
-# Extensions manager object
-manager = None
 
 
 class Net(nn.Module):
@@ -32,13 +28,10 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(manager, args, model, device, train_loader, optimizer, epoch):
     model.train()
-    epoch_size = len(train_loader)
     for batch_idx, (data, target) in enumerate(train_loader):
-        current_it = epoch * epoch_size + batch_idx
-        with manager.run_iteration(
-                iteration=current_it, epoch_size=epoch_size):
+        with manager.run_iteration():
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
@@ -114,7 +107,6 @@ def main():
     optimizer = optim.SGD(
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
-    global manager
     # manager.extend(...) also works
     writer = extensions.snapshot_writers.SimpleWriter()
     my_extensions = [
@@ -140,13 +132,15 @@ def main():
     models = {'main': model}
     optimizers = {'main': optimizer}
     manager = pte.training.ExtensionsManager(
-        models, optimizers, args.epochs, my_extensions)
+        models, optimizers, args.epochs,
+        extensions=my_extensions,
+        iters_per_epoch=len(train_loader))
     # Lets load the snapshot
     if args.snapshot is not None:
         state = torch.load(args.snapshot)
         manager.load_state_dict(state)
     for epoch in range(0, args.epochs):
-        train(args, model, device, train_loader, optimizer, epoch)
+        train(manager, args, model, device, train_loader, optimizer, epoch)
         # Test function is called from the evaluator extension
         # to get access to the reporter and other facilities
         # test(args, model, device, test_loader)
