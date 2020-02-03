@@ -22,38 +22,46 @@ def _test_trigger(trigger, key, accuracies, expected, iters_per_epoch):
     assert invoked_iterations == expected
 
 
+def _compare(best_value, new_value):
+    return abs(new_value) < abs(best_value)
+
+
 @pytest.mark.parametrize(
-    'trigger_type,iters_per_epoch,interval,accuracies,expected',
+    'trigger_type,trigger_args,iters_per_epoch,accuracies,expected',
     [
         # interval = 1 iterations
-        (triggers.MaxValueTrigger, 1, (1, 'iteration'),
+        (triggers.MaxValueTrigger, ((1, 'iteration'),), 1,
          [0.5, 0.5, 0.4, 0.6], [1, 4]),
-        (triggers.MinValueTrigger, 1, (1, 'iteration'),
+        (triggers.MinValueTrigger, ((1, 'iteration'),), 1,
          [0.5, 0.5, 0.4, 0.6], [1, 3]),
         # interval = 2 iterations
-        (triggers.MaxValueTrigger, 1, (2, 'iteration'),
+        (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, 1, (2, 'iteration'),
+        (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
         # interval = 2 iterations, unaligned resume
-        (triggers.MaxValueTrigger, 1, (2, 'iteration'),
+        (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, 1, (2, 'iteration'),
+        (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
         # interval = 1 epoch, 1 epoch = 2 iterations
-        (triggers.MaxValueTrigger, 2, (1, 'epoch'),
+        (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, 2, (1, 'epoch'),
+        (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
         # interval = 1 epoch, 1 epoch = 2 iterations, unaligned resume
-        (triggers.MaxValueTrigger, 2, (1, 'epoch'),
+        (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, 2, (1, 'epoch'),
+        (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
          [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
+
+        # best_value trigger test
+        (triggers.BestValueTrigger, (_compare, (1, 'iteration')), 2,
+         [0.5, -0.5, -0.6, 0.6, 0.4, -0.4, -0.3, 0.3], [1, 5, 7]),
     ]
 )
-def test_trigger(
-        trigger_type, iters_per_epoch, interval, accuracies, expected):
+def test_minmax_trigger(
+        trigger_type, trigger_args, iters_per_epoch, accuracies, expected):
     key = 'main/accuracy'
-    trigger = trigger_type(key, trigger=interval)
+    trigger = trigger_type(key, *trigger_args)
     _test_trigger(trigger, key, accuracies, expected, iters_per_epoch)
