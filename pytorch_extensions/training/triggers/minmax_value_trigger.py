@@ -70,7 +70,7 @@ class BestValueTrigger(object):
     def load_state_dict(self, to_load):
         self._interval_trigger.load_state_dict(to_load['interval_trigger'])
         self._summary.load_state_dict(to_load['_summary'])
-        self._best_value.load_state_dict(to_load['_best_value'])
+        self._best_value = to_load['_best_value']
 
 
 class MaxValueTrigger(BestValueTrigger):

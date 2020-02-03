@@ -1,67 +1,97 @@
-import mock
 import pytest
 
 from pytorch_extensions.training import triggers
 from pytorch_extensions import training
 
 
-def _test_trigger(trigger, key, accuracies, expected, iters_per_epoch):
-    optimizers = {'main': mock.MagicMock()}
-    max_epochs = -(-len(expected) // iters_per_epoch)
-    trainer = training.ExtensionsManager(
-        {}, optimizers, max_epochs, iters_per_epoch=iters_per_epoch)
-
-    invoked_iterations = []
-
-    for it, e in enumerate([0.] + accuracies):
-        with trainer.run_iteration():
-            trainer.observation = {key: accuracies[it - 1]}
-            if trigger(trainer):
-                invoked_iterations.append(it)
-
-    assert invoked_iterations == expected
+def _test_trigger(manager, trigger, key, accuracies, expected):
+    for accuracy, e in zip(accuracies, expected):
+        with manager.run_iteration():
+            manager.observation = {key: accuracy}
+            assert trigger(manager) == e
 
 
 def _compare(best_value, new_value):
     return abs(new_value) < abs(best_value)
 
 
-@pytest.mark.parametrize(
-    'trigger_type,trigger_args,iters_per_epoch,accuracies,expected',
-    [
-        # interval = 1 iterations
-        (triggers.MaxValueTrigger, ((1, 'iteration'),), 1,
-         [0.5, 0.5, 0.4, 0.6], [1, 4]),
-        (triggers.MinValueTrigger, ((1, 'iteration'),), 1,
-         [0.5, 0.5, 0.4, 0.6], [1, 3]),
-        # interval = 2 iterations
-        (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
-        # interval = 2 iterations, unaligned resume
-        (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
-        # interval = 1 epoch, 1 epoch = 2 iterations
-        (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
-        # interval = 1 epoch, 1 epoch = 2 iterations, unaligned resume
-        (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 8]),
-        (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
-         [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6], [2, 6]),
+_trigger_test_params = [
+    # interval = 1 iterations
+    (triggers.MaxValueTrigger, ((1, 'iteration'),), 1,
+     [0.5, 0.5, 0.4, 0.6], [True, False, False, True], 1),
+    (triggers.MinValueTrigger, ((1, 'iteration'),), 1,
+     [0.5, 0.5, 0.4, 0.6], [True, False, True, False], 1),
+    # interval = 2 iterations
+    (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, False, False, True], 2),
+    (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, True, False, False], 2),
+    # interval = 2 iterations, unaligned resume
+    (triggers.MaxValueTrigger, ((2, 'iteration'),), 1,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, False, False, True], 3),
+    (triggers.MinValueTrigger, ((2, 'iteration'),), 1,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, True, False, False], 3),
+    # interval = 1 epoch, 1 epoch = 2 iterations
+    (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, False, False, True], 2),
+    (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, True, False, False], 2),
+    # interval = 1 epoch, 1 epoch = 2 iterations, unaligned resume
+    (triggers.MaxValueTrigger, ((1, 'epoch'),), 2,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, False, False, True], 3),
+    (triggers.MinValueTrigger, ((1, 'epoch'),), 2,
+     [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.6, 0.6],
+     [False, True, False, False, False, True, False, False], 3),
 
-        # best_value trigger test
-        (triggers.BestValueTrigger, (_compare, (1, 'iteration')), 2,
-         [0.5, -0.5, -0.6, 0.6, 0.4, -0.4, -0.3, 0.3], [1, 5, 7]),
-    ]
+    # best_value trigger test
+    (triggers.BestValueTrigger, (_compare, (1, 'iteration')), 2,
+     [0.5, -0.5, -0.6, 0.6, 0.4, -0.4, -0.3, 0.3],
+     [True, False, False, False, True, False, True, False], 3),
+]
+
+
+@pytest.mark.parametrize(
+    'trigger_type,trigger_args,iters_per_epoch,accuracies,expected,resume',
+    _trigger_test_params
 )
-def test_minmax_trigger(
-        trigger_type, trigger_args, iters_per_epoch, accuracies, expected):
+def test_trigger(
+        trigger_type, trigger_args, iters_per_epoch, accuracies, expected,
+        resume):
     key = 'main/accuracy'
+    manager = training.ExtensionsManager(
+        {}, [], 100, iters_per_epoch=iters_per_epoch)
+
     trigger = trigger_type(key, *trigger_args)
-    _test_trigger(trigger, key, accuracies, expected, iters_per_epoch)
+    _test_trigger(
+        manager, trigger, key, [0.] + accuracies, [False] + expected)
+
+
+@pytest.mark.parametrize(
+    'trigger_type,trigger_args,iters_per_epoch,accuracies,expected,resume',
+    _trigger_test_params
+)
+def test_resumed_trigger(
+        trigger_type, trigger_args, iters_per_epoch, accuracies, expected,
+        resume):
+    key = 'main/accuracy'
+    manager = training.ExtensionsManager(
+        {}, [], 100, iters_per_epoch=iters_per_epoch)
+
+    trigger = trigger_type(key, *trigger_args)
+    _test_trigger(
+        manager, trigger, key, [0.] + accuracies[:resume],
+        [False] + expected[:resume])
+
+    state = trigger.state_dict()
+
+    new_trigger = trigger_type(key, *trigger_args)
+    new_trigger.load_state_dict(state)
+    _test_trigger(
+        manager, new_trigger, key, accuracies[resume:], expected[resume:])
