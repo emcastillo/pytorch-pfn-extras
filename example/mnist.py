@@ -5,18 +5,18 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 
-import pytorch_extensions as pte
-import pytorch_extensions.training.extensions as extensions
+import pytorch_pfn_extras as ppe
+import pytorch_pfn_extras.training.extensions as extensions
 
 
 class Net(nn.Module):
     def __init__(self, lazy):
         super().__init__()
         if lazy:
-            self.conv1 = pte.nn.LazyConv2d(None, 20, 5, 1)
-            self.conv2 = pte.nn.LazyConv2d(None, 50, 5, 1)
-            self.fc1 = pte.nn.LazyLinear(None, 500)
-            self.fc2 = pte.nn.LazyLinear(None, 10)
+            self.conv1 = ppe.nn.LazyConv2d(None, 20, 5, 1)
+            self.conv2 = ppe.nn.LazyConv2d(None, 50, 5, 1)
+            self.fc1 = ppe.nn.LazyLinear(None, 500)
+            self.fc2 = ppe.nn.LazyLinear(None, 10)
         else:
             self.conv1 = nn.Conv2d(1, 20, 5, 1)
             self.conv2 = nn.Conv2d(20, 50, 5, 1)
@@ -42,7 +42,7 @@ def train(manager, args, model, device, train_loader, optimizer, epoch):
             optimizer.zero_grad()
             output = model(data)
             loss = F.nll_loss(output, target)
-            pte.reporter.report({'train/loss': loss.item()})
+            ppe.reporter.report({'train/loss': loss.item()})
             loss.backward()
             optimizer.step()
 
@@ -59,10 +59,10 @@ def test(args, model, device, data, target):
     output = model(data)
     # Final result will be average of averages of the same size
     test_loss += F.nll_loss(output, target, reduction='mean').item()
-    pte.reporter.report({'val/loss': test_loss})
+    ppe.reporter.report({'val/loss': test_loss})
     pred = output.argmax(dim=1, keepdim=True)
     correct += pred.eq(target.view_as(pred)).sum().item()
-    pte.reporter.report({'val/acc': correct/len(data)})
+    ppe.reporter.report({'val/acc': correct/len(data)})
 
 
 def main():
@@ -145,7 +145,7 @@ def main():
     ]
     models = {'main': model}
     optimizers = {'main': optimizer}
-    manager = pte.training.ExtensionsManager(
+    manager = ppe.training.ExtensionsManager(
         models, optimizers, args.epochs,
         extensions=my_extensions,
         iters_per_epoch=len(train_loader))
