@@ -22,6 +22,7 @@ import pytorch_pfn_extras as ppe
 
 class Net(nn.Module):
     def __init__(self):
+        super().__init__()
         self.conv1 = ppe.nn.LazyConv2d(None, 20, 5, 1)
         self.conv2 = ppe.nn.LazyConv2d(None, 50, 5, 1)
         self.fc1 = ppe.nn.LazyLinear(None, 500)
