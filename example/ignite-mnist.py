@@ -13,8 +13,8 @@ from ignite.engine import create_supervised_trainer
 from ignite.engine import create_supervised_evaluator
 from ignite.metrics import Accuracy, Loss
 
-import pytorch_extensions as pte
-import pytorch_extensions.training.extensions as extensions
+import pytorch_pfn_extras as ppe
+import pytorch_pfn_extras.training.extensions as extensions
 
 
 class Net(nn.Module):
@@ -87,7 +87,7 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     ]
     models = {'main': model}
     optimizers = {'main': optimizer}
-    manager = pte.training.IgniteExtensionsManager(
+    manager = ppe.training.IgniteExtensionsManager(
         trainer, models, optimizers, args.epochs,
         extensions=my_extensions)
 
@@ -99,7 +99,7 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
 
     @trainer.on(Events.ITERATION_COMPLETED)
     def report_loss(engine):
-        pte.reporter.report({'train/loss': engine.state.output})
+        ppe.reporter.report({'train/loss': engine.state.output})
 
     trainer.run(train_loader, max_epochs=epochs)
 
