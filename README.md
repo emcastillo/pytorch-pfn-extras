@@ -10,6 +10,13 @@ pip install pytorch-pfn-extras --extra-index-url https://pypi.pfn.io/simple
 
 # Development version
 pip install git+https://github.com/pfnet/pytorch-pfn-extras
+
+### Optinal dependencies
+# For PlotReport / VariableStatisticsPlot extensions
+pip install matplotlib
+
+# For IgniteExtensionsManager and example code
+pip install pytorch-ignite torchvision
 ```
 
 ## Documentation
