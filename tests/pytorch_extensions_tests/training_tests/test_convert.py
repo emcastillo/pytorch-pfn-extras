@@ -1,6 +1,6 @@
 import torch
 
-from pytorch_extensions import training
+from pytorch_pfn_extras import training
 
 
 def test_transfer_data():
