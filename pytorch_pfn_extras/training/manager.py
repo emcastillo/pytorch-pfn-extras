@@ -267,8 +267,15 @@ class _BaseExtensionsManager:
 
 
 class ExtensionsManager(_BaseExtensionsManager):
-    """
-    Keeps track of the extensions and the current status
+    """Manages the extensions and the current status.
+
+    Args:
+        models (dict): Map of string to Module.
+        optimizers (dict): Map of string to Optimizer.
+        max_epochs (int): Number of epochs in the whole training loop.
+        iters_per_epoch (int): Number of iterations in one epoch.
+        extensions (list or None): List of Extentions to be used.
+        out_dir (str): Output directory (default: ``result``).
     """
 
     def __init__(
@@ -277,8 +284,8 @@ class ExtensionsManager(_BaseExtensionsManager):
             optimizers,
             max_epochs,
             *,
-            extensions=None,
             iters_per_epoch,
+            extensions=None,
             out_dir='result'):
         super().__init__(
             models, optimizers, max_epochs, extensions, out_dir)
@@ -308,6 +315,16 @@ class ExtensionsManager(_BaseExtensionsManager):
 
 
 class IgniteExtensionsManager(_BaseExtensionsManager):
+    """Manages extensions and the current status in Ignite training loop.
+
+    Args:
+        engine (ignite.Engine): Ignite trainer engine.
+        models (dict): Map of string to Module.
+        optimizers (dict): Map of string to Optimizer.
+        max_epochs (int): Number of epochs in the whole training loop.
+        extensions (list or None): List of Extentions to be used.
+        out_dir (str): Output directory (default: ``result``).
+    """
     def __init__(
             self,
             engine,
