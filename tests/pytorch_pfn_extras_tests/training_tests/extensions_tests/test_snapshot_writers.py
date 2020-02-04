@@ -1,8 +1,7 @@
 import multiprocessing
 import threading
 import tempfile
-
-import mock
+from unittest import mock
 
 from pytorch_pfn_extras.training.extensions import snapshot_writers
 
