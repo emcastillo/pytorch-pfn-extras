@@ -3,8 +3,8 @@ import itertools
 import os
 import tempfile
 import time
+from unittest import mock
 
-import mock
 import torch
 import pytest
 
