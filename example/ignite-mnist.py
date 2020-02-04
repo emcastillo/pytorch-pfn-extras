@@ -13,13 +13,13 @@ from ignite.engine import create_supervised_trainer
 from ignite.engine import create_supervised_evaluator
 from ignite.metrics import Accuracy, Loss
 
-import pytorch_extensions as pte
-import pytorch_extensions.training.extensions as extensions
+import pytorch_pfn_extras as ppe
+import pytorch_pfn_extras.training.extensions as extensions
 
 
 class Net(nn.Module):
     def __init__(self):
-        super(Net, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
@@ -73,8 +73,6 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),
-        extensions.ExponentialShift(
-            'lr', 0.9999, optimizer, init=0.2, target=0.1),
         extensions.observe_lr(optimizer=optimizer),
         extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),
@@ -89,8 +87,9 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     ]
     models = {'main': model}
     optimizers = {'main': optimizer}
-    manager = pte.training.IgniteExtensionsManager(
-        trainer, models, optimizers, args.epochs, my_extensions)
+    manager = ppe.training.IgniteExtensionsManager(
+        trainer, models, optimizers, args.epochs,
+        extensions=my_extensions)
 
     # Lets load the snapshot
     if args.snapshot is not None:
@@ -100,7 +99,7 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
 
     @trainer.on(Events.ITERATION_COMPLETED)
     def report_loss(engine):
-        pte.reporter.report({'train/loss': engine.state.output})
+        ppe.reporter.report({'train/loss': engine.state.output})
 
     trainer.run(train_loader, max_epochs=epochs)
 
