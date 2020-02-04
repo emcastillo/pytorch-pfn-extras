@@ -159,7 +159,7 @@ def test_evaluator_with_eval_func():
     data = [
         numpy.random.uniform(-1, 1, (3, 4)).astype('f') for _ in range(2)]
 
-    data_loader = torch.utils.data.DataLoader(data, batch_size=1)
+    data_loader = torch.utils.data.DataLoader(data)
     target = DummyModel()
     evaluator = pte.training.extensions.Evaluator(
         data_loader, {}, eval_func=target)
