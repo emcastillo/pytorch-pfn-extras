@@ -78,6 +78,7 @@ class LazyTestBase:
         assert expected.shape == actual.shape
         assert (expected == actual).all()
 
+    @pytest.mark.gpu()
     def test_cuda(self):
         torch.manual_seed(0)
         input = self.get_input().cuda()
