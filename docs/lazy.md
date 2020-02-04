@@ -58,7 +58,7 @@ You will get a warning if you pass uninitialized lazy parameters to optimizers:
 ```
 >>> model = ppe.nn.LazyLinear(None, 10)
 >>> optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-/.../pytorch-extensions/pytorch_extensions/nn/modules/lazy.py:127: UserWarning:
+/.../pytorch-pfn-extras/pytorch_pfn_extras/nn/modules/lazy.py:127: UserWarning:
     Use of uninitialized lazy parameter in Optimizer has been detected.
     Maybe you forgot to run forward before passing `module.parameters()` to the optimizer?
 ```
