@@ -1,8 +1,10 @@
+import pytest
 import torch
 
 from pytorch_pfn_extras import training
 
 
+@pytest.mark.gpu
 def test_transfer_data():
     batch = [torch.randn(2, 2), torch.randn(3, 4)]
     assert all(batch[i].device == torch.device('cpu') for i in range(2))
