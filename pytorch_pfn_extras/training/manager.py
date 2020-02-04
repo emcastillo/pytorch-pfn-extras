@@ -325,8 +325,6 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
         extensions (list or None): List of Extentions to be used.
         out_dir (str): Output directory (default: ``result``).
     """
-
-
     def __init__(
             self,
             engine,
