@@ -1,6 +1,6 @@
 # Lazy Modules
 
-Lazy modules can automatically infer the shape of weights based on the shape of the data given to the first forward invocation.
+Lazy modules can automatically infer shapes of parameters based on the shape of the data given to the first forward invocation.
 
 Following modules are provided:
 
