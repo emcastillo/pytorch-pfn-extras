@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import pytorch_pfn_extras as ppe
 
 
-class Net(nn.Module):
+class Net(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = ppe.nn.LazyConv2d(None, 20, 5, 1)
