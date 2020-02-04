@@ -1,13 +1,12 @@
-import mock
 import pytest
 
-from pytorch_extensions import training
-from pytorch_extensions.training import trigger_util
-from pytorch_extensions.training import triggers
+from pytorch_pfn_extras import training
+from pytorch_pfn_extras.training import trigger_util
+from pytorch_pfn_extras.training import triggers
 
 
 @pytest.mark.parametrize(
-    'iter_per_epoch,trigger_args,expected',
+    'iters_per_epoch,trigger_args,expected',
     [
         # Never fire trigger
         (2, None, [False, False, False, False, False, False, False]),
@@ -27,13 +26,12 @@ from pytorch_extensions.training import triggers
          [False, False, True, False, False, False, False]),
     ]
 )
-def test_get_trigger(iter_per_epoch, trigger_args, expected):
-    optimizers = {'main': mock.MagicMock()}
-    epochs = -(-len(expected) // iter_per_epoch)
-    trainer = training.ExtensionsManager({}, optimizers, epochs, [])
+def test_get_trigger(iters_per_epoch, trigger_args, expected):
+    trainer = training.ExtensionsManager(
+        {}, [], 100, iters_per_epoch=iters_per_epoch)
     trigger = trigger_util.get_trigger(trigger_args)
 
     # before the first iteration, trigger should be False
     for it, e in enumerate([False] + expected):
-        with trainer.run_iteration(iteration=it, epoch_size=iter_per_epoch):
+        with trainer.run_iteration():
             assert trigger(trainer) == e
