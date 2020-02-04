@@ -1,6 +1,6 @@
 # pytorch-pfn-extras
 
-Supplementary components to accelerate research and development for PyTorch.
+Supplementary components to accelerate research and development in PyTorch.
 
 ## Installation
 

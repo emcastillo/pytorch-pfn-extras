@@ -2,8 +2,8 @@ import setuptools
 
 
 setuptools.setup(
-    name='pytorch_pfn_extras',
-    description='Torch port of several chainer extensions',
+    name='pytorch-pfn-extras',
+    description='Supplementary components to accelerate research and development in PyTorch.',
     version='0.0.0',
     install_requires=['numpy', 'torch'],
     extras_require={'test': ['pytest']},
