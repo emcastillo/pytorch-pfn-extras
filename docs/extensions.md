@@ -6,17 +6,17 @@ Extensions Manager provides an interface to extend your training loop, by integr
 
 Currently the following extensions are available:
 
-+ Evaluator
-+ LogReport
-+ MicroAverage
-+ PrintReport
-+ ProgressBar
-+ ParameterStatistics
-+ PlotReport
-+ observe_lr
-+ observe_value
-+ snapshot
-+ VariableStatisticsPlot
++ `Evaluator`
++ `LogReport`
++ `MicroAverage`
++ `PrintReport`
++ `ProgressBar`
++ `ParameterStatistics`
++ `PlotReport`
++ `observe_lr`
++ `observe_value`
++ `snapshot`
++ `VariableStatisticsPlot`
 
 ## How to use
 
@@ -27,32 +27,33 @@ An example follows:
 
 ```python
 import pytorch_pfn_extras as ppe
-from pytorch_pfn_extras.training as ppe
-from pytorch_extensions import ExtensionsManager
-from pytorch_extensions import reporter
-import pytorch_extensions.extensions as extensions
+from pytorch_pfn_extras.training import extensions
 
 import time
+import math
 
 max_epoch = 10
-epoch_size = 938
+iters_per_epoch = 938
 
 # manager.extend(...) also works
 my_extensions = [extensions.LogReport(),
                  extensions.ProgressBar(),
-                 extensions.PrintReport(['epoch', 'iteration', 'loss'])]
+                 extensions.PrintReport(['epoch', 'iteration', 'sin', 'cos'])]
 
 models = {}
-manager = ExtensionsManager(models, max_epoch, my_extensions)
+optimizers = []
+manager = ppe.training.ExtensionsManager(
+    models, optimizers, max_epoch,
+    extensions=my_extensions,
+    iters_per_epoch=iters_per_epoch)
 
-current_it = 0
 for epoch in range(max_epoch):
-    #print(epoch)
-    for iter in range(epoch_size):
-        # Needs the total iters as in chainer
-        current_it = epoch*epoch_size+iter
+    for i in range(iters_per_epoch):
         with manager.run_iteration():
-            reporter.report({'loss': iter/100+epoch})
+            ppe.reporter.report({
+                'sin': math.sin(i * 2 * math.pi / iters_per_epoch),
+                'cos': math.cos(i * 2 * math.pi / iters_per_epoch),
+            })
             time.sleep(0.001)
 ```
 
@@ -63,14 +64,18 @@ In the examples folder there is a mnist using all the avaiable extensions.
 Ignite is supported by using the `IgniteExtensionsManager` with the trainer
 as the first argument.
 
-The user needs to define a ignite event to report the appropiated metrics
+The user needs to define an ignite event to report the appropiated metrics
 for the extensions to use them.
 
 
 ```python
+manager = ppe.training.IgniteExtensionsManager(
+    trainer, models, optimizers, epochs,
+    extensions=my_extensions)
+
 @trainer.on(Events.ITERATION_COMPLETED)
 def report_loss(engine):
-    pte.reporter.report({'train/loss':engine.state.output})
+    ppe.reporter.report({'train/loss':engine.state.output})
 ```
 
 
@@ -96,10 +101,10 @@ def test(args, model, device, data, target):
     ...
     # Final result will be average of averages of the same size
     test_loss += F.nll_loss(output, target, reduction='mean').item()
-    pte.reporter.report({'val/loss': test_loss})
+    ppe.reporter.report({'val/loss': test_loss})
     pred = output.argmax(dim=1, keepdim=True)
     correct += pred.eq(target.view_as(pred)).sum().item()
-    pte.reporter.report({'val/acc': correct/len(data)})
+    ppe.reporter.report({'val/acc': correct/len(data)})
 ```
 
 #### Ignite
