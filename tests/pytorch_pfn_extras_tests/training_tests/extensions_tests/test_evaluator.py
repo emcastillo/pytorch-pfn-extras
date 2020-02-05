@@ -13,7 +13,7 @@ class DummyModel(torch.nn.Module):
 
     def forward(self, x):
         self.args.append(x)
-        ppe.reporter.report({'loss': x.sum()}, self)
+        ppe.reporting.report({'loss': x.sum()}, self)
 
 
 class DummyModelTwoArgs(torch.nn.Module):
@@ -24,7 +24,7 @@ class DummyModelTwoArgs(torch.nn.Module):
 
     def forward(self, x, y):
         self.args.append((x, y))
-        ppe.reporter.report({'loss': x.sum() + y.sum()}, self)
+        ppe.reporting.report({'loss': x.sum() + y.sum()}, self)
 
 
 def _torch_batch_to_numpy(batch):
@@ -50,7 +50,7 @@ def evaluator_dummies():
 def test_evaluate(evaluator_dummies):
     data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         mean = evaluator.evaluate()
@@ -92,7 +92,7 @@ def test_evaluator_name(evaluator_dummies):
 def test_current_report(evaluator_dummies):
     data, data_loader, target, evaluator, expect_mean = evaluator_dummies
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     with reporter:
         mean = evaluator()
     # The result is reported to the current reporter.
@@ -109,7 +109,7 @@ def test_evaluator_tuple_data():
     target = DummyModelTwoArgs()
     evaluator = ppe.training.extensions.Evaluator(data_loader, target)
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         mean = evaluator.evaluate()
@@ -137,7 +137,7 @@ def test_evaluator_dict_data():
     target = DummyModelTwoArgs()
     evaluator = ppe.training.extensions.Evaluator(data_loader, target)
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         mean = evaluator.evaluate()
@@ -164,7 +164,7 @@ def test_evaluator_with_eval_func():
     evaluator = ppe.training.extensions.Evaluator(
         data_loader, {}, eval_func=target)
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         evaluator.evaluate()
@@ -184,7 +184,7 @@ def test_evaluator_progress_bar():
     evaluator = ppe.training.extensions.Evaluator(
         data_loader, {}, eval_func=target, progress_bar=True)
 
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.add_observer('target', target)
     with reporter:
         evaluator.evaluate()

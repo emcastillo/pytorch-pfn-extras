@@ -10,18 +10,18 @@ import pytorch_pfn_extras as ppe
 
 
 def test_empty_reporter():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     assert reporter.observation == {}
 
 
 def test_enter_exit():
-    reporter1 = ppe.reporter.Reporter()
-    reporter2 = ppe.reporter.Reporter()
+    reporter1 = ppe.reporting.Reporter()
+    reporter2 = ppe.reporting.Reporter()
     with reporter1:
-        assert ppe.reporter.get_current_reporter() is reporter1
+        assert ppe.reporting.get_current_reporter() is reporter1
         with reporter2:
-            assert ppe.reporter.get_current_reporter() is reporter2
-        assert ppe.reporter.get_current_reporter() is reporter1
+            assert ppe.reporting.get_current_reporter() is reporter2
+        assert ppe.reporting.get_current_reporter() is reporter1
 
 
 def test_enter_exit_threadsafe():
@@ -33,12 +33,12 @@ def test_enter_exit_threadsafe():
             # Sleep for a tiny moment to cause an overlap of the context
             # managers.
             time.sleep(0.01)
-            record.append(ppe.reporter.get_current_reporter())
+            record.append(ppe.reporting.get_current_reporter())
 
     record1 = []  # The current reporter in each thread is stored here.
     record2 = []
-    reporter1 = ppe.reporter.Reporter()
-    reporter2 = ppe.reporter.Reporter()
+    reporter1 = ppe.reporting.Reporter()
+    reporter2 = ppe.reporting.Reporter()
     thread1 = threading.Thread(
         target=thread_func,
         args=(reporter1, record1))
@@ -56,19 +56,19 @@ def test_enter_exit_threadsafe():
 
 
 def test_scope():
-    reporter1 = ppe.reporter.Reporter()
-    reporter2 = ppe.reporter.Reporter()
+    reporter1 = ppe.reporting.Reporter()
+    reporter2 = ppe.reporting.Reporter()
     with reporter1:
         observation = {}
         with reporter2.scope(observation):
-            assert ppe.reporter.get_current_reporter() is reporter2
+            assert ppe.reporting.get_current_reporter() is reporter2
             assert reporter2.observation is observation
-        assert ppe.reporter.get_current_reporter() is reporter1
+        assert ppe.reporting.get_current_reporter() is reporter1
         assert reporter2.observation is not observation
 
 
 def test_add_observer():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     observer = object()
     reporter.add_observer('o', observer)
 
@@ -81,7 +81,7 @@ def test_add_observer():
 
 
 def test_add_observers():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     observer1 = object()
     reporter.add_observer('o1', observer1)
     observer2 = object()
@@ -102,7 +102,7 @@ def test_add_observers():
 
 
 def test_report_without_observer():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     reporter.report({'x': 1})
 
     observation = reporter.observation
@@ -110,58 +110,58 @@ def test_report_without_observer():
     assert observation['x'] == 1
 
 
-# ppe.reporter.report
+# ppe.reporting.report
 
 def test_report_without_reporter():
     observer = object()
-    ppe.reporter.report({'x': 1}, observer)
+    ppe.reporting.report({'x': 1}, observer)
 
 
 def test_report():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     with reporter:
-        ppe.reporter.report({'x': 1})
+        ppe.reporting.report({'x': 1})
     observation = reporter.observation
     assert 'x' in observation
     assert observation['x'] == 1
 
 
 def test_report_with_observer():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     observer = object()
     reporter.add_observer('o', observer)
     with reporter:
-        ppe.reporter.report({'x': 1}, observer)
+        ppe.reporting.report({'x': 1}, observer)
     observation = reporter.observation
     assert 'o/x' in observation
     assert observation['o/x'] == 1
 
 
 def test_report_with_unregistered_observer():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     observer = object()
     with reporter:
         with pytest.raises(KeyError):
-            ppe.reporter.report({'x': 1}, observer)
+            ppe.reporting.report({'x': 1}, observer)
 
 
 def test_report_scope():
-    reporter = ppe.reporter.Reporter()
+    reporter = ppe.reporting.Reporter()
     observation = {}
 
     with reporter:
-        with ppe.reporter.report_scope(observation):
-            ppe.reporter.report({'x': 1})
+        with ppe.reporting.report_scope(observation):
+            ppe.reporting.report({'x': 1})
 
     assert 'x' in observation
     assert observation['x'] == 1
     assert 'x' not in reporter.observation
 
 
-# ppe.reporter.Summary
+# ppe.reporting.Summary
 
 def test_summary_basic():
-    summary = ppe.reporter.Summary()
+    summary = ppe.reporting.Summary()
     summary.add(torch.Tensor(numpy.array(1, 'float32')))
     summary.add(torch.Tensor(numpy.array(-2, 'float32')))
 
@@ -174,7 +174,7 @@ def test_summary_basic():
 
 
 def test_summary_int():
-    summary = ppe.reporter.Summary()
+    summary = ppe.reporting.Summary()
     summary.add(1)
     summary.add(2)
     summary.add(3)
@@ -188,7 +188,7 @@ def test_summary_int():
 
 
 def test_summary_float():
-    summary = ppe.reporter.Summary()
+    summary = ppe.reporting.Summary()
     summary.add(1.)
     summary.add(2.)
     summary.add(3.)
@@ -202,7 +202,7 @@ def test_summary_float():
 
 
 def test_summary_weight():
-    summary = ppe.reporter.Summary()
+    summary = ppe.reporting.Summary()
     summary.add(1., 0.5)
     summary.add(2., numpy.array(0.4))
     summary.add(3., torch.autograd.Variable(torch.Tensor(numpy.array(0.3))))
@@ -213,11 +213,11 @@ def test_summary_weight():
 
 
 def _check_summary_serialize(value1, value2, value3):
-    summary = ppe.reporter.Summary()
+    summary = ppe.reporting.Summary()
     summary.add(value1)
     summary.add(value2)
 
-    summary2 = ppe.reporter.Summary()
+    summary2 = ppe.reporting.Summary()
     summary2.load_state_dict(summary.state_dict())
     summary2.add(value3)
 
@@ -259,7 +259,7 @@ def test_serialize_scalar_int():
     _check_summary_serialize(1, -2, 2)
 
 
-# ppe.reporter.DictSummary
+# ppe.reporting.DictSummary
 
 def _check_dict_summary(summary, data):
     mean = summary.compute_mean()
@@ -282,7 +282,7 @@ def _check_dict_summary(summary, data):
 
 
 def test_dict_summary():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'numpy': numpy.array(3, 'f'), 'int': 1, 'float': 4.})
     summary.add({'numpy': numpy.array(1, 'f'), 'int': 5, 'float': 9.})
     summary.add({'numpy': numpy.array(2, 'f'), 'int': 6, 'float': 5.})
@@ -296,7 +296,7 @@ def test_dict_summary():
 
 
 def test_dit_summary_sparse():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'a': 3., 'b': 1.})
     summary.add({'a': 1., 'b': 5., 'c': 9.})
     summary.add({'b': 6.})
@@ -310,7 +310,7 @@ def test_dit_summary_sparse():
 
 
 def test_dict_summary_weight():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'a': (1., 0.5)})
     summary.add({'a': (2., numpy.array(0.4))})
     summary.add(
@@ -330,12 +330,12 @@ def test_dict_summary_weight():
 
 
 def test_dict_summary_serialize():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'numpy': numpy.array(3, 'f'), 'int': 1, 'float': 4.})
     summary.add({'numpy': numpy.array(1, 'f'), 'int': 5, 'float': 9.})
     summary.add({'numpy': numpy.array(2, 'f'), 'int': 6, 'float': 5.})
 
-    summary2 = ppe.reporter.DictSummary()
+    summary2 = ppe.reporting.DictSummary()
     summary2.load_state_dict(summary.state_dict())
     summary2.add({'numpy': numpy.array(3, 'f'), 'int': 5, 'float': 8.})
 
@@ -359,13 +359,13 @@ def test_dict_summary_serialize_names_with_delimiter(
     key1 = 'a{d}b'.format(d=delimiter)
     key2 = '{d}a{d}b'.format(d=delimiter)
     key3 = 'a{d}b{d}'.format(d=delimiter)
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({key1: 3., key2: 1., key3: 4.})
     summary.add({key1: 1., key2: 5., key3: 9.})
     summary.add({key1: 2., key2: 6., key3: 5.})
 
     if transfer_protocol == 'direct':
-        summary2 = ppe.reporter.DictSummary()
+        summary2 = ppe.reporting.DictSummary()
         summary2.load_state_dict(summary.state_dict())
     else:
         assert transfer_protocol == 'torch'
@@ -382,11 +382,11 @@ def test_dict_summary_serialize_names_with_delimiter(
 
 
 def test_serialize_overwrite_different_names():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'a': 3., 'b': 1.})
     summary.add({'a': 1., 'b': 5.})
 
-    summary2 = ppe.reporter.DictSummary()
+    summary2 = ppe.reporting.DictSummary()
     summary2.add({'c': 5.})
     summary2.load_state_dict(summary.state_dict())
 
@@ -397,7 +397,7 @@ def test_serialize_overwrite_different_names():
 
 
 def test_serialize_overwrite_rollback():
-    summary = ppe.reporter.DictSummary()
+    summary = ppe.reporting.DictSummary()
     summary.add({'a': 3., 'b': 1.})
     summary.add({'a': 1., 'b': 5.})
 

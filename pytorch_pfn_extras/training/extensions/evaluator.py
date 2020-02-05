@@ -3,7 +3,7 @@ import datetime
 
 import torch
 
-from pytorch_pfn_extras import reporter as reporter_module
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training.extensions import util
 
@@ -110,7 +110,7 @@ class Evaluator(extension.Extension):
 
         Unlike usual extensions, this extension can be executed without passing
         a manager object. This extension reports the performance on validation
-        dataset using the :func:`~reporter_module.report` function.
+        dataset using the :func:`~reporting.report` function.
         Thus, users can use this extension independently from any manager
         by manually configuring a :class:`~Reporter` object.
 
@@ -125,7 +125,7 @@ class Evaluator(extension.Extension):
 
         """
         # set up a reporter
-        reporter = reporter_module.Reporter()
+        reporter = reporting.Reporter()
         if self.name is not None:
             prefix = self.name + '/'
         else:
@@ -139,7 +139,7 @@ class Evaluator(extension.Extension):
             with torch.no_grad():
                 result = self.evaluate()
 
-        reporter_module.report(result)
+        reporting.report(result)
         return result
 
     def evaluate(self):
@@ -162,7 +162,7 @@ class Evaluator(extension.Extension):
         if self.eval_hook:
             self.eval_hook(self)
 
-        summary = reporter_module.DictSummary()
+        summary = reporting.DictSummary()
 
         updater = IterationStatus(len(iterator))
         if self._progress_bar:
@@ -172,7 +172,7 @@ class Evaluator(extension.Extension):
             for idx, batch in enumerate(iterator):
                 updater.current_position = idx
                 observation = {}
-                with reporter_module.report_scope(observation):
+                with reporting.report_scope(observation):
                     if isinstance(batch, (tuple, list)):
                         eval_func(*batch)
                     elif isinstance(batch, dict):
@@ -275,7 +275,7 @@ class IgniteEvaluator(Evaluator):
         @self.evaluator.on(Events.EPOCH_STARTED)
         def set_evaluation_started(engine):
             self.observation = {}
-            self.cm = reporter_module.report_scope(self.observation)
+            self.cm = reporting.report_scope(self.observation)
             self.cm.__enter__()
 
         if self._progress_bar:
@@ -288,14 +288,14 @@ class IgniteEvaluator(Evaluator):
         def set_evaluation_completed(engine):
             metrics = self.evaluator.state.metrics
             for metric in metrics:
-                reporter_module.report(
+                reporting.report(
                     {'val/{}'.format(metric): metrics[metric]})
             self.cm.__exit__(None, None, None)
             self.summary.add(self.observation)
 
     def evaluate(self):
         iterator = self._iterators['main']
-        self.summary = reporter_module.DictSummary()
+        self.summary = reporting.DictSummary()
         self.updater = IterationStatus(len(iterator))
         if self._progress_bar:
             self.pbar = _IteratorProgressBar(iterator=self.updater)

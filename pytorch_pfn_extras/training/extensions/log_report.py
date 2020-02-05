@@ -3,7 +3,7 @@ import os
 import shutil
 import tempfile
 
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
 
@@ -139,7 +139,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
         self._log = json.loads(to_load['_log'])
 
     def _init_summary(self):
-        self._summary = reporter.DictSummary()
+        self._summary = reporting.DictSummary()
 
     def to_dataframe(self):
         # Need to install pandas to use this method.
