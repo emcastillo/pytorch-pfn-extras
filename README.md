@@ -22,7 +22,7 @@ pip install pytorch-ignite torchvision
 ## Documentation
 
 * [Extensions Manager](docs/extensions.md)
-* [Reporter](docs/reporter.md)
+* [Reporting](docs/reporting.md)
 * [Lazy Modules](docs/lazy.md)
 * [Distributed Snapshot](docs/snapshot.md)
 

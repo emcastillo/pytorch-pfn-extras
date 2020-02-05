@@ -19,7 +19,7 @@ def test_run():
 
     for js in numpy.ndindex(data_shape):
         with manager.run_iteration():
-            ppe.reporter.report({
+            ppe.reporting.report({
                 'main/correct': data_correct[js],
                 'main/total': data_total[js],
             })

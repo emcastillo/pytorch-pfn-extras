@@ -42,7 +42,7 @@ def train(manager, args, model, device, train_loader, optimizer, epoch):
             optimizer.zero_grad()
             output = model(data)
             loss = F.nll_loss(output, target)
-            ppe.reporter.report({'train/loss': loss.item()})
+            ppe.reporting.report({'train/loss': loss.item()})
             loss.backward()
             optimizer.step()
 
@@ -59,10 +59,10 @@ def test(args, model, device, data, target):
     output = model(data)
     # Final result will be average of averages of the same size
     test_loss += F.nll_loss(output, target, reduction='mean').item()
-    ppe.reporter.report({'val/loss': test_loss})
+    ppe.reporting.report({'val/loss': test_loss})
     pred = output.argmax(dim=1, keepdim=True)
     correct += pred.eq(target.view_as(pred)).sum().item()
-    ppe.reporter.report({'val/acc': correct/len(data)})
+    ppe.reporting.report({'val/acc': correct/len(data)})
 
 
 def main():

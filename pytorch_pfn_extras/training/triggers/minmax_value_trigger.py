@@ -1,4 +1,4 @@
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import trigger_util
 
 
@@ -59,7 +59,7 @@ class BestValueTrigger:
         return False
 
     def _init_summary(self):
-        self._summary = reporter.DictSummary()
+        self._summary = reporting.DictSummary()
 
     def state_dict(self):
         state = {'interval_trigger': self._interval_trigger.state_dict(),

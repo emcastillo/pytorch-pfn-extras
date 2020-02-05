@@ -1,7 +1,7 @@
 import operator
 import warnings
 
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import trigger_util
 
 
@@ -147,7 +147,7 @@ class EarlyStoppingTrigger:
         return self.count >= self.patience
 
     def _init_summary(self):
-        self._summary = reporter.DictSummary()
+        self._summary = reporting.DictSummary()
 
     def get_training_length(self):
         return self._max_trigger.get_training_length()
