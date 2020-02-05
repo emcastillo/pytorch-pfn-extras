@@ -1,6 +1,6 @@
 import torch
 
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
 
@@ -101,7 +101,7 @@ class ParameterStatistics(extension.Extension):
 
         self._prefix = prefix
         self._trigger = trigger_module.get_trigger(trigger)
-        self._summary = reporter.DictSummary()
+        self._summary = reporting.DictSummary()
         self._skip_nan_params = skip_nan_params
 
     def __call__(self, manager):
@@ -151,8 +151,8 @@ class ParameterStatistics(extension.Extension):
         self._summary.add(statistics)
 
         if self._trigger(manager):
-            reporter.report(self._summary.compute_mean())
-            self._summary = reporter.DictSummary()  # Clear summary
+            reporting.report(self._summary.compute_mean())
+            self._summary = reporting.DictSummary()  # Clear summary
 
     def register_statistics(self, name, function):
         """Register a function to compute a certain statistic.

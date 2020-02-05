@@ -1,4 +1,4 @@
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger_util
 
@@ -36,7 +36,7 @@ class MicroAverage(extension.Extension):
     ...         loss = torch.nn.CrossEntropyLoss(x, y)
     ...         correct = (x.data.argmax(axis=1) == y.data).sum()
     ...         total = len(y.data)
-    ...         reporter.report({'correct': correct, 'total': total}, self)
+    ...         reporting.report({'correct': correct, 'total': total}, self)
     ...         return loss
 
     And then, make an extension with corresponding reporting keys and
@@ -84,7 +84,7 @@ class MicroAverage(extension.Extension):
             result = float(self._numerator) / self._denominator
             self._numerator = 0
             self._denominator = 0
-            reporter.report({self._result_key: result})
+            reporting.report({self._result_key: result})
 
     def state_dict(self):
         state = {'_numerator': self._numerator,

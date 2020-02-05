@@ -5,7 +5,7 @@ import time
 
 from pytorch_pfn_extras.training import extension as extension_module
 from pytorch_pfn_extras.training import trigger as trigger_module
-from pytorch_pfn_extras.reporter import Reporter
+from pytorch_pfn_extras.reporting import Reporter
 
 
 # Select the best-resolution timer function

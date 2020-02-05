@@ -99,7 +99,7 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
 
     @trainer.on(Events.ITERATION_COMPLETED)
     def report_loss(engine):
-        ppe.reporter.report({'train/loss': engine.state.output})
+        ppe.reporting.report({'train/loss': engine.state.output})
 
     trainer.run(train_loader, max_epochs=epochs)
 

@@ -4,7 +4,7 @@ import warnings
 
 import numpy
 
-from pytorch_pfn_extras import reporter
+from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
 
@@ -40,7 +40,7 @@ filename='plot.png', marker='x', grid=True)
     An extension to output plots.
 
     This extension accumulates the observations of the manager to
-    :class:`~pytorch_pfn_extras.reporter.DictSummary` at a regular
+    :class:`~pytorch_pfn_extras.reporting.DictSummary` at a regular
     interval specified by a supplied trigger, and plot a graph with using them.
 
     There are two triggers to handle this extension. One is the trigger to
@@ -197,4 +197,4 @@ filename='plot.png', marker='x', grid=True)
         self._data = json.loads(to_load[key])
 
     def _init_summary(self):
-        self._summary = reporter.DictSummary()
+        self._summary = reporting.DictSummary()
