@@ -9,7 +9,7 @@ Supplementary components to accelerate research and development in PyTorch.
 pip install pytorch-pfn-extras --extra-index-url https://pypi.pfn.io/simple
 
 # Development version
-pip install git+https://github.com/pfnet/pytorch-pfn-extras
+pip install git+ssh://git@github.pfidev.jp/DLFW/pytorch-pfn-extras
 
 ### Optinal dependencies
 # For PlotReport / VariableStatisticsPlot extensions
