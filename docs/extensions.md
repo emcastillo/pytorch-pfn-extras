@@ -135,3 +135,60 @@ executed in the chainer defined order.
 If you want to execute an event-handler in between chainer extensions, create a Chainer-like extension
 and access the ignite engine on the `.engine` attribute of the manager object passed as a parameter
 when your extension is called.
+
+# Creating Extensions
+
+It is possible to create an extension just by passing a function which
+receives the manager object as an argument to the manager extend call
+
+```python
+def my_extension(manager):
+    print('Epoch-Iteration: {}-{}'.format(manager.epoch, manager.iteration)
+
+manager.extend(my_extension, trigger=(1, 'iteration')
+```
+
+It is also possible to create extensions using the `ppe.training.extension.make_extension`
+decorator to add a specific `trigger`, `default_name`, `priority`.
+In addition, `initializer`, `finalizer` and `on_error` functions can be specified as well.
+
+```python
+@ppe.training.extension.make_extension(finalizer=lambda: print('done'))
+def my_extension(manager):
+    print('Epoch-Iteration: {}-{}'.format(manager.epoch, manager.iteration)
+```
+
+Finally, it is possible to create an extension by subclassing the `ppe.training.extensions.Extension` class
+as shown below.
+
+```python
+import pytorch_pfn_extras as ppe
+
+class MyExtension(ppe.training.extension.Extension)
+    def __init__(self, args):
+        self.args = args
+
+    def initialize(self, manager):
+        """
+        Automatically called before training. Optional.
+        """
+        pass
+
+    def __call__(self, manager):
+        """
+        Called when the associated trigger is fired.
+        """
+        print('Epoch-Iteration: {}-{}'.format(manager.epoch, manager.iteration)
+
+    def state_dict(self):
+        """ 
+        Used to serialize the state. Optional.
+        """
+        return {'args': self.args}
+
+    def load_state_dict(self, state):
+        """ 
+        Used to deserialize the state. Optional.
+        """
+        self.args = state['args']
+```
