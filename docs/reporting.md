@@ -25,10 +25,14 @@ There is also a global API to add values:
 ```python
 import pytorch_pfn_extras as ppe
 
-observation = {}
+reporter = ppe.reporting.Reporter()
+observer = object()
+reporter.add_observer('my_observer', observer)
 
-with ppe.reporting.report_scope(observation):
-     ppe.reporting.report({'x': 1}, observer)
+observation = {}
+with reporter:
+    with ppe.reporting.report_scope(observation):
+         ppe.reporting.report({'x': 1}, observer)
 
 print(observation)
 # outputs: {'my_observer/x': 1}
