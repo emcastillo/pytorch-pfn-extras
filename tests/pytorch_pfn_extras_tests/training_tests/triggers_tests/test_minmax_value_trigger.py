@@ -8,7 +8,7 @@ def _test_trigger(manager, trigger, key, accuracies, expected):
     for accuracy, e in zip(accuracies, expected):
         with manager.run_iteration():
             manager.observation = {key: accuracy}
-            assert trigger(manager) == e
+        assert trigger(manager) == e
 
 
 def _compare(best_value, new_value):
@@ -67,10 +67,9 @@ def test_trigger(
     key = 'main/accuracy'
     manager = training.ExtensionsManager(
         {}, [], 100, iters_per_epoch=iters_per_epoch)
-
     trigger = trigger_type(key, *trigger_args)
     _test_trigger(
-        manager, trigger, key, [0.] + accuracies, [False] + expected)
+        manager, trigger, key, accuracies, expected)
 
 
 @pytest.mark.parametrize(
@@ -86,8 +85,8 @@ def test_resumed_trigger(
 
     trigger = trigger_type(key, *trigger_args)
     _test_trigger(
-        manager, trigger, key, [0.] + accuracies[:resume],
-        [False] + expected[:resume])
+        manager, trigger, key, accuracies[:resume],
+        expected[:resume])
 
     state = trigger.state_dict()
 

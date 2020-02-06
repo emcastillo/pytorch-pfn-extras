@@ -51,8 +51,9 @@ _scheduled_trigger_test_params = [
 def _test_trigger(trainer, trigger, expected, finished):
     for (e, f) in zip(expected, finished):
         with trainer.run_iteration():
-            assert trigger(trainer) == e
-            assert trigger.finished == f
+            pass
+        assert trigger(trainer) == e
+        assert trigger.finished == f
 
 
 @pytest.mark.parametrize(
@@ -64,7 +65,7 @@ def test_trigger(iters_per_epoch, schedule, expected, finished, resume):
         {}, [], 100, iters_per_epoch=iters_per_epoch)
     trigger = triggers.ManualScheduleTrigger(*schedule)
 
-    _test_trigger(trainer, trigger, [False] + expected, [False] + finished)
+    _test_trigger(trainer, trigger, expected, finished)
 
 
 @pytest.mark.parametrize(
@@ -79,7 +80,7 @@ def test_resumed_trigger(
 
     _test_trigger(
         trainer, trigger,
-        [False] + expected[:resume], [False] + finished[:resume])
+        expected[:resume], finished[:resume])
 
     state = trigger.state_dict()
     new_trigger = triggers.ManualScheduleTrigger(*schedule)

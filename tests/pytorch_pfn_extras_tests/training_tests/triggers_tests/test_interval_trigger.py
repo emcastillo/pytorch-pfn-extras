@@ -21,10 +21,10 @@ def test_trigger(iters_per_epoch, interval, expected, resume):
         {}, [], 100, iters_per_epoch=iters_per_epoch)
     trigger = triggers.IntervalTrigger(*interval)
 
-    # before the first iteration, trigger should be False
-    for e in [False] + expected:
+    for e in expected:
         with trainer.run_iteration():
-            assert trigger(trainer) == e
+            pass
+        assert trigger(trainer) == e
 
 
 @pytest.mark.parametrize(
@@ -34,10 +34,10 @@ def test_resumed_trigger(iters_per_epoch, interval, expected, resume):
         {}, [], 100, iters_per_epoch=iters_per_epoch)
     trigger = triggers.IntervalTrigger(*interval)
 
-    # before the first iteration, trigger should be False
-    for e in [False] + expected[:resume]:
+    for e in expected[:resume]:
         with trainer.run_iteration():
-            assert trigger(trainer) == e
+            pass
+        assert trigger(trainer) == e
 
     state = trigger.state_dict()
     new_trigger = triggers.IntervalTrigger(*interval)
@@ -45,7 +45,8 @@ def test_resumed_trigger(iters_per_epoch, interval, expected, resume):
 
     for e in expected[resume:]:
         with trainer.run_iteration():
-            assert new_trigger(trainer) == e
+            pass
+        assert new_trigger(trainer) == e
 
 
 @pytest.mark.parametrize(
