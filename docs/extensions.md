@@ -50,7 +50,7 @@ manager = ppe.training.ExtensionsManager(
 for epoch in range(max_epoch):
     for i in range(iters_per_epoch):
         with manager.run_iteration():
-            ppe.reporter.report({
+            ppe.reporting.report({
                 'sin': math.sin(i * 2 * math.pi / iters_per_epoch),
                 'cos': math.cos(i * 2 * math.pi / iters_per_epoch),
             })
@@ -75,7 +75,7 @@ manager = ppe.training.IgniteExtensionsManager(
 
 @trainer.on(Events.ITERATION_COMPLETED)
 def report_loss(engine):
-    ppe.reporter.report({'train/loss':engine.state.output})
+    ppe.reporting.report({'train/loss':engine.state.output})
 ```
 
 
@@ -101,10 +101,10 @@ def test(args, model, device, data, target):
     ...
     # Final result will be average of averages of the same size
     test_loss += F.nll_loss(output, target, reduction='mean').item()
-    ppe.reporter.report({'val/loss': test_loss})
+    ppe.reporting.report({'val/loss': test_loss})
     pred = output.argmax(dim=1, keepdim=True)
     correct += pred.eq(target.view_as(pred)).sum().item()
-    ppe.reporter.report({'val/acc': correct/len(data)})
+    ppe.reporting.report({'val/acc': correct/len(data)})
 ```
 
 #### Ignite
