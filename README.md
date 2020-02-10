@@ -29,7 +29,7 @@ pip install pytorch-ignite torchvision
 ## Examples
 
 * [Custom training loop](example/mnist.py)
-* [Ignite integration](example/mnist.py)
+* [Ignite integration](example/ignite-mnist.py)
 
 ## Contribution Guide
 
