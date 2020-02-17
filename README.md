@@ -19,6 +19,22 @@ pip install matplotlib
 pip install pytorch-ignite torchvision
 ```
 
+### Tips for FlexCI
+
+FlexCI (`ci.pfn.io`) cannot access PFN PyPI (`pypi.pfn.io`) nor GHE.
+To use pytorch-pfn-extras (PPE) in FlexCI projects, download it using [gsutil](https://cloud.google.com/storage/docs/gsutil_install).
+
+```
+# `gsutil` command is pre-installed in the FlexCI environment.
+# This creates `pytorch-pfn-extras` directory which works like a local PyPI repository.
+gsutil -m cp -r gs://chainer-pfn-private-ci/pytorch-pfn-extras .
+
+# Then install PPE using the local `pytorch-pfn-extras` directory.
+pip install --find-links=pytorch-pfn-extras/index.html pytorch-pfn-extras
+```
+
+This issue will be resolved once the library is released as an OSS.
+
 ## Documentation
 
 * [Extensions Manager](docs/extensions.md)
