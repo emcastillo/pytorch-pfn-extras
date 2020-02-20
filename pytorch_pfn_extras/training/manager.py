@@ -91,14 +91,19 @@ class _BaseExtensionsManager:
             os.makedirs(self.out)
         self.reporter = Reporter()
 
-        for name in models:
-            model = models[name]
+        if not isinstance(models, dict):
+            self._models = {'main': models}
+        else:
+            self._models = models
+        if not isinstance(optimizers, dict):
+            self._optimizers = {'main': optimizers}
+        else:
+            self._optimizers = optimizers
+
+        for name, model in self._models.items():
             self.reporter.add_observer(name, model)
             self.reporter.add_observers(
                 name, model.named_modules())
-
-        self._models = models
-        self._optimizers = optimizers
         self.max_epochs = max_epochs
         self._start_iteration = 0
         # Defer!
@@ -295,8 +300,10 @@ class ExtensionsManager(_BaseExtensionsManager):
     """Manages the extensions and the current status.
 
     Args:
-        models (dict): Map of string to Module.
-        optimizers (dict): Map of string to Optimizer.
+        models (dict or `torch.nn.Module`): Map of string to Module
+            or an actual Module
+        optimizers (dict or `torch.Optimizer`): Map of string to Optimizer
+            or an actual Optimizer.
         max_epochs (int): Number of epochs in the whole training loop.
         iters_per_epoch (int): Number of iterations in one epoch.
         extensions (list or None): List of Extentions to be used.
@@ -350,9 +357,11 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
     """Manages extensions and the current status in Ignite training loop.
 
     Args:
-        engine (ignite.Engine): Ignite trainer engine.
-        models (dict): Map of string to Module.
-        optimizers (dict): Map of string to Optimizer.
+        engine (ignite.Engine): Ignite trainer engine
+        models (dict or torch.nn.Module): Map of string to Module
+            or an actual Module
+        optimizers (dict or torch.Optimizer): Map of string to Optimizer
+            or an actual Optimizer.
         max_epochs (int): Number of epochs in the whole training loop.
         extensions (list or None): List of Extentions to be used.
         out_dir (str): Output directory (default: ``result``).
