@@ -89,14 +89,6 @@ class Extension:
         When the manager has been restored from a snapshot, this method has to
         recover an appropriate part of the state of the manager.
 
-        For example, :class:`~pytorch_pfn_extras.extensions.ExponentialShift`
-        extension changes the optimizer's hyperparameter at each invocation.
-        Note that the hyperparameter is not saved to the snapshot; it is the
-        responsibility of the extension to recover the hyperparameter.
-        The :class:`~pytorch_pfn_extras.extensions.ExponentialShift` extension
-        recovers it in its ``initialize`` method if it has been loaded from a
-        snapshot, or just setting the initial value otherwise.
-
         Args:
             manager (~pytorch_pfn_extras.training.ExtensionsManager):
                 Manager object to call this extension.
