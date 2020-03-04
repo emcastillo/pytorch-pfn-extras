@@ -8,10 +8,21 @@ from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
 
 
+def _default_writer(log_name, dir_out, log):
+    with tempfile.TemporaryDirectory(
+            prefix=log_name, dir=dir_out) as tempd:
+        path = os.path.join(tempd, 'log.json')
+        with open(path, 'w') as f:
+            json.dump(log, f, indent=4)
+
+        new_path = os.path.join(dir_out, log_name)
+        shutil.move(path, new_path)
+
+
 class LogReport(extension.Extension):
 
     """__init__(\
-keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
+keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log', writer=None)
 
     An extension to output the accumulated results to a log file.
 
@@ -53,6 +64,10 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
             does not output the log to any file.
             For historical reasons ``log_name`` is also accepted as an alias
             of this argument.
+        writer (writer object, optional): must be callable.
+            object to dump the log to. If specified, it needs to have a correct
+            `savefun` defined. The writer can override the save location in
+            the :class:`pytorch_pfn_extras.training.ExtensionsManager` object
 
     """
 
@@ -62,6 +77,9 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
         self._trigger = trigger_module.get_trigger(trigger)
         self._postprocess = postprocess
         self._log = []
+        # When using a writer, it needs to have a savefun defined
+        # to deal with a string.
+        self._writer = kwargs.get('writer', _default_writer)
 
         log_name = kwargs.get('log_name', 'log')
         if filename is None:
@@ -103,14 +121,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log')
             if self._log_name is not None:
                 log_name = self._log_name.format(**stats_cpu)
                 out = manager.out
-                with tempfile.TemporaryDirectory(
-                        prefix=log_name, dir=out) as tempd:
-                    path = os.path.join(tempd, 'log.json')
-                    with open(path, 'w') as f:
-                        json.dump(self._log, f, indent=4)
-
-                    new_path = os.path.join(manager.out, log_name)
-                    shutil.move(path, new_path)
+                self._writer(log_name, out, self._log)
 
             # reset the summary for the next output
             self._init_summary()
