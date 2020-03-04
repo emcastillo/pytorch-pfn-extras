@@ -94,7 +94,6 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
     # Lets load the snapshot
     if args.snapshot is not None:
         state = torch.load(args.snapshot)
-        print(state['state'])
         manager.load_state_dict(state)
 
     @trainer.on(Events.ITERATION_COMPLETED)

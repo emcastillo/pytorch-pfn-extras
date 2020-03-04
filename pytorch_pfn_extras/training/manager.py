@@ -336,6 +336,7 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             out_dir='result'):
         super().__init__(models, optimizers, max_epochs, extensions, out_dir)
         self.engine = engine
+        self._start_epoch = 0  # Used to correctly restore snapshots
         self.set_ignite_handlers()
 
     def set_ignite_handlers(self):
@@ -350,7 +351,8 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
         @self.engine.on(Events.STARTED)
         def set_training_started(engine):
             start_iteration = self._start_iteration
-            self.engine.state.iteration = start_iteration
+            self.engine.state.iteration = self._start_iteration
+            self.engine.state.epoch = self._start_epoch
             self._start_time = _get_time()
             iters_per_epoch = len(engine.state.dataloader)
             self._prepare_for_training(start_iteration, iters_per_epoch)
@@ -369,11 +371,10 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
 
     def state_dict(self):
         to_save = super().state_dict()
-        to_save['_start_epoch'] = self.engine.state.epoch
+        to_save['_epoch_length'] = self.engine.state.epoch_length
         to_save['_start_iteration'] = self.engine.state.iteration
         return to_save
 
     def load_state_dict(self, to_load):
         super().load_state_dict(to_load)
-        self.engine.state.epoch = self._start_epoch
-        self.engine.state.iteration = self._start_iteration
+        self._start_epoch = self._start_iteration // to_load['_epoch_length']
