@@ -182,6 +182,8 @@ filename='plot.png', marker='x', grid=True)
                     self._postprocess(f, a, summary)
                 leg = a.legend(
                     bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+                if not os.path.exists(manager.out):
+                    os.makedirs(manager.out)
                 f.savefig(os.path.join(manager.out, self._file_name),
                           bbox_extra_artists=(leg,), bbox_inches='tight')
 

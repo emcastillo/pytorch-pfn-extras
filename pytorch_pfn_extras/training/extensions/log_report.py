@@ -9,12 +9,13 @@ from pytorch_pfn_extras.training import trigger as trigger_module
 
 
 def _default_writer(log_name, dir_out, log):
+    if not os.path.exists(dir_out):
+        os.makedirs(dir_out)
     with tempfile.TemporaryDirectory(
             prefix=log_name, dir=dir_out) as tempd:
         path = os.path.join(tempd, 'log.json')
         with open(path, 'w') as f:
             json.dump(log, f, indent=4)
-
         new_path = os.path.join(dir_out, log_name)
         shutil.move(path, new_path)
 

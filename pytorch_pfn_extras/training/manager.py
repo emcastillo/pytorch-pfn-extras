@@ -87,8 +87,6 @@ class _BaseExtensionsManager:
         self._internal_stop_trigger = copy.deepcopy(self._stop_trigger)
         self.observation = {}
         self._out = out_dir
-        if not os.path.exists(self.out):
-            os.makedirs(self.out)
         self.reporter = Reporter()
 
         for name in models:

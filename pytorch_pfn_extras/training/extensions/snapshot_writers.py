@@ -56,6 +56,8 @@ class Writer:
 
     def save(self, filename, outdir, target, savefun, **kwds):
         prefix = 'tmp' + filename
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
         with tempfile.TemporaryDirectory(prefix=prefix, dir=outdir) as tmpdir:
             tmppath = os.path.join(tmpdir, filename)
             savefun(target, tmppath)
