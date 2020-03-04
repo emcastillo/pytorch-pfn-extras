@@ -5,6 +5,7 @@ import time
 
 from pytorch_pfn_extras.training import extension as extension_module
 from pytorch_pfn_extras.training import trigger as trigger_module
+from pytorch_pfn_extras.training import util as util_module
 from pytorch_pfn_extras.reporting import Reporter
 
 
@@ -334,6 +335,11 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             *,
             extensions=None,
             out_dir='result'):
+        import ignite
+        if (util_module._get_ignite_version(ignite.__version__)
+                < util_module._get_ignite_version('0.3.0')):
+            raise ImportError('Ignite version found {}. '
+                              'Required is >=0.3.0'.format(ignite.__version__))
         super().__init__(models, optimizers, max_epochs, extensions, out_dir)
         self.engine = engine
         self._start_epoch = 0  # Used to correctly restore snapshots
