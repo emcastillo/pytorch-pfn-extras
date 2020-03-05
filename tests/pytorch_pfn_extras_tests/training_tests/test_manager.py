@@ -1,5 +1,6 @@
 import pytest
 
+import torch
 from torch import nn
 
 from pytorch_pfn_extras import training
@@ -113,10 +114,23 @@ class _StateDictModel(_StateDictObj, nn.Module):
         pass
 
 
+class _StateDictOptimizer(_StateDictObj):
+
+    def zero_grad(self):
+        pass
+
+    def step(self):
+        pass
+
+
 class _StateDictExtension(_StateDictObj):
 
     def __call__(self, manager):
         pass
+
+
+def _fake_loss(*args):
+    return torch.tensor([0.0], requires_grad=True)
 
 
 def test_extensions_manager_state_dict():
@@ -126,12 +140,14 @@ def test_extensions_manager_state_dict():
     max_epochs = 5
     iters_per_epoch = 4
     passed_iteration = 11
+
     manager = training.ExtensionsManager(
         {'model_name': _StateDictModel(state_dict=model_state_dict)},
         {'optimizer_name': _StateDictObj(state_dict=optimizer_state_dict)},
         max_epochs,
         iters_per_epoch=iters_per_epoch,
     )
+
     manager.extend(
         _StateDictExtension(
             state_dict=extension_state_dict), name='extension_name')
@@ -164,6 +180,74 @@ def test_extensions_manager_state_dict():
         {'optimizer_name': new_optimizer},
         max_epochs,
         iters_per_epoch=iters_per_epoch,
+    )
+    new_manager.extend(new_extension, name='extension_name')
+    new_manager.load_state_dict(state_dict)
+    assert new_model.called_load_state_dict == 1
+    assert new_optimizer.called_load_state_dict == 1
+    assert new_optimizer.called_load_state_dict == 1
+
+
+def test_ignite_extensions_manager_state_dict():
+
+    from ignite.engine import create_supervised_trainer
+
+    model_state_dict = object()
+    optimizer_state_dict = object()
+    extension_state_dict = object()
+    max_epochs = 5
+    iters_per_epoch = 4
+    passed_iteration = 20
+
+    model = _StateDictModel(state_dict=model_state_dict)
+    optimizer = _StateDictOptimizer(state_dict=optimizer_state_dict)
+
+    trainer = create_supervised_trainer(
+        model, optimizer, _fake_loss)
+
+    manager = training.IgniteExtensionsManager(
+        trainer,
+        {'model_name': model},
+        {'optimizer_name': optimizer},
+        max_epochs,
+    )
+    manager.extend(
+        _StateDictExtension(
+            state_dict=extension_state_dict), name='extension_name')
+
+    loader = torch.utils.data.DataLoader(
+        [(i, i) for i in range(iters_per_epoch)])
+    trainer.run(loader, max_epochs=max_epochs)
+
+    state_dict = manager.state_dict()
+
+    assert state_dict == {
+        '_start_iteration': passed_iteration,
+        '_epoch_length': iters_per_epoch,
+        'models': {'model_name': model_state_dict},
+        'optimizers': {'optimizer_name': optimizer_state_dict},
+        'extensions': {'extension_name': {
+            'extension': extension_state_dict,
+            'trigger': {
+                '_previous_iteration': passed_iteration,
+                '_previous_epoch_detail': passed_iteration / iters_per_epoch
+            },
+        }},
+    }
+
+    new_model = _StateDictModel(state_dict_to_be_loaded=model_state_dict)
+    new_optimizer = _StateDictOptimizer(
+        state_dict_to_be_loaded=optimizer_state_dict)
+    new_extension = _StateDictExtension(
+        state_dict_to_be_loaded=extension_state_dict)
+
+    new_trainer = create_supervised_trainer(
+        model, optimizer, _fake_loss)
+    new_manager = training.IgniteExtensionsManager(
+        new_trainer,
+        {'model_name': new_model},
+        {'optimizer_name': new_optimizer},
+        max_epochs,
     )
     new_manager.extend(new_extension, name='extension_name')
     new_manager.load_state_dict(state_dict)
