@@ -12,6 +12,7 @@ from pytorch_pfn_extras import training
 from pytorch_pfn_extras.training import extensions
 from pytorch_pfn_extras.training.extensions._snapshot import (
     _find_latest_snapshot, _find_snapshot_files, _find_stale_snapshots)
+from pytorch_pfn_extras import writing
 
 
 def get_trainer_with_mock_updater(*, out_dir):
@@ -43,7 +44,7 @@ def test_savefun_and_writer_exclusive():
     # savefun and writer arguments cannot be specified together.
     def savefun(*args, **kwargs):
         assert False
-    writer = extensions.snapshot_writers.SimpleWriter()
+    writer = writing.SimpleWriter()
     with pytest.raises(TypeError):
         extensions.snapshot(savefun=savefun, writer=writer)
 
@@ -62,7 +63,7 @@ def remover():
 def test_save_file(remover):
     trainer = get_trainer_with_mock_updater(out_dir='.')
     trainer._done = True
-    w = extensions.snapshot_writers.SimpleWriter()
+    w = writing.SimpleWriter()
     snapshot = extensions.snapshot_object(trainer, 'myfile.dat',
                                           writer=w)
     snapshot(trainer)

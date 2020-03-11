@@ -125,7 +125,7 @@ def main():
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
     # manager.extend(...) also works
-    writer = extensions.snapshot_writers.SimpleWriter()
+    writer = ppe.writing.SimpleWriter()
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),

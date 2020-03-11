@@ -69,7 +69,7 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
         device=device)
 
     # manager.extend(...) also works
-    writer = extensions.snapshot_writers.SimpleWriter()
+    writer = ppe.writing.SimpleWriter()
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),

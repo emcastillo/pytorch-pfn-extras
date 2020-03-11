@@ -4,7 +4,7 @@ import torch
 import torch.distributed
 
 from pytorch_pfn_extras.training import extension
-from pytorch_pfn_extras.training.extensions import snapshot_writers
+from pytorch_pfn_extras import writing
 
 
 def _find_snapshot_files(fmt, path):
@@ -129,7 +129,7 @@ n_retains=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~pytorch_pfn_extras.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_pfn_extras.writing.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case training
@@ -207,7 +207,7 @@ def snapshot(savefun=None,
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~pytorch_pfn_extras.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_pfn_extras.writing.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case training
@@ -244,7 +244,8 @@ def snapshot(savefun=None,
         asynchronous, hiding I/O overhead of snapshots.
 
         >>> from pytorch_pfn_extras.training import extensions
-        >>> writer = extensions.snapshot_writers.ProcessWriter()
+        >>> from pytorch_pfn_extras import writing
+        >>> writer = writing.ProcessWriter()
         >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
@@ -252,23 +253,19 @@ trigger=(1, 'epoch'))
         function as ``savefun`` argument of the writer.
 
         >>> from pytorch_pfn_extras.training import extensions
-        >>> writer = extensions.snapshot_writers.ProcessWriter(
+        >>> from pytorch_pfn_extras import writing
+        >>> writer = writing.ProcessWriter(
         ...     savefun=torch.save)
         >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
     This is the list of built-in snapshot writers.
 
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-SimpleWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ThreadWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ProcessWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ThreadQueueWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ProcessQueueWriter`
+        - :class:`pytorch_pfn_extras.writing.SimpleWriter`
+        - :class:`pytorch_pfn_extras.writing.ThreadWriter`
+        - :class:`pytorch_pfn_extras.writing.ProcessWriter`
+        - :class:`pytorch_pfn_extras.writing.ThreadQueueWriter`
+        - :class:`pytorch_pfn_extras.writing.ProcessQueueWriter`
 
     .. seealso::
 
@@ -281,7 +278,7 @@ ProcessQueueWriter`
     if writer is None:
         if savefun is None:
             savefun = torch.save
-        writer = snapshot_writers.SimpleWriter(savefun=savefun)
+        writer = writing.SimpleWriter(savefun=savefun)
     if saver_rank is None:
         return _Snapshot(
             target=target, condition=condition, writer=writer,
@@ -321,7 +318,7 @@ class _Snapshot(extension.Extension):
         if condition is None:
             condition = _always_true
         if writer is None:
-            writer = snapshot_writers.SimpleWriter()
+            writer = writing.SimpleWriter()
         self._target = target
         self.filename = filename
         self.condition = condition

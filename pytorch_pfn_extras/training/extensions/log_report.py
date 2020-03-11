@@ -1,23 +1,14 @@
 import json
-import os
-import shutil
-import tempfile
 
 from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
+from pytorch_pfn_extras import writing
 
 
-def _default_writer(log_name, dir_out, log):
-    if not os.path.exists(dir_out):
-        os.makedirs(dir_out)
-    with tempfile.TemporaryDirectory(
-            prefix=log_name, dir=dir_out) as tempd:
-        path = os.path.join(tempd, 'log.json')
-        with open(path, 'w') as f:
-            json.dump(log, f, indent=4)
-        new_path = os.path.join(dir_out, log_name)
-        shutil.move(path, new_path)
+def log_writer_save_func(target, path):
+    with open(path, 'w') as f:
+        json.dump(target, f, indent=4)
 
 
 class LogReport(extension.Extension):
@@ -80,7 +71,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log', writer=None)
         self._log = []
         # When using a writer, it needs to have a savefun defined
         # to deal with a string.
-        self._writer = kwargs.get('writer', _default_writer)
+        self._writer = kwargs.get('writer', None)
 
         log_name = kwargs.get('log_name', 'log')
         if filename is None:
@@ -101,6 +92,10 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log', writer=None)
             summary.add(observation)
         else:
             summary.add({k: observation[k] for k in keys if k in observation})
+
+        if self._writer is None:
+            self._writer = writing.SimpleWriter(savefun=log_writer_save_func)
+            self._writer.initialize(manager.out)
 
         if manager.is_before_training or self._trigger(manager):
             # output the result
