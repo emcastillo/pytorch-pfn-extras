@@ -11,6 +11,12 @@ from pytorch_pfn_extras.training import trigger as trigger_module
 _available = None
 
 
+def matplotlib_savefun(target, file_o):
+    fig, leg, plt = target
+    fig.savefig(file_o, bbox_extra_artists=(leg,), bbox_inches='tight')
+    plt.close()
+
+
 def _try_import_matplotlib():
     global matplotlib, _available
     try:
@@ -98,6 +104,10 @@ filename='plot.png', marker='x', grid=True)
             ``None`` is given, it draws with no markers.
         grid (bool): If ``True``, set the axis grid on.
             The default value is ``True``.
+        writer (writer object, optional): must be callable.
+            object to dump the log to. If specified, it needs to have a correct
+            `savefun` defined. The writer can override the save location in
+            the :class:`pytorch_pfn_extras.training.ExtensionsManager` object
 
     """
 
@@ -124,6 +134,7 @@ filename='plot.png', marker='x', grid=True)
         self._postprocess = postprocess
         self._init_summary()
         self._data = {k: [] for k in y_keys}
+        self._writer = kwargs.get('writer', None)
 
     @staticmethod
     def available():
@@ -146,6 +157,8 @@ filename='plot.png', marker='x', grid=True)
             summary.add(observation)
         else:
             summary.add({k: observation[k] for k in keys if k in observation})
+
+        writer = manager.writer if self._writer is None else self._writer
 
         if manager.is_before_training or self._trigger(manager):
             stats = self._summary.compute_mean()
@@ -184,10 +197,9 @@ filename='plot.png', marker='x', grid=True)
                     bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
                 if not os.path.exists(manager.out):
                     os.makedirs(manager.out)
-                f.savefig(os.path.join(manager.out, self._file_name),
-                          bbox_extra_artists=(leg,), bbox_inches='tight')
+                writer(self._file_name, manager.out, (f, leg, plt),
+                       savefun=matplotlib_savefun)
 
-            plt.close()
             self._init_summary()
 
     def state_dict(self):

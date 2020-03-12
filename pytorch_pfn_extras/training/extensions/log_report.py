@@ -3,12 +3,10 @@ import json
 from pytorch_pfn_extras import reporting
 from pytorch_pfn_extras.training import extension
 from pytorch_pfn_extras.training import trigger as trigger_module
-from pytorch_pfn_extras import writing
 
 
-def log_writer_save_func(target, path):
-    with open(path, 'w') as f:
-        json.dump(target, f, indent=4)
+def log_writer_save_func(target, file_o):
+    file_o.write(bytes(json.dumps(target, indent=4).encode('ascii')))
 
 
 class LogReport(extension.Extension):
@@ -93,9 +91,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log', writer=None)
         else:
             summary.add({k: observation[k] for k in keys if k in observation})
 
-        if self._writer is None:
-            self._writer = writing.SimpleWriter(savefun=log_writer_save_func)
-            self._writer.initialize(manager.out)
+        writer = manager.writer if self._writer is None else self._writer
 
         if manager.is_before_training or self._trigger(manager):
             # output the result
@@ -117,7 +113,7 @@ keys=None, trigger=(1, 'epoch'), postprocess=None, filename='log', writer=None)
             if self._log_name is not None:
                 log_name = self._log_name.format(**stats_cpu)
                 out = manager.out
-                self._writer(log_name, out, self._log)
+                writer(log_name, out, self._log, savefun=log_writer_save_func)
 
             # reset the summary for the next output
             self._init_summary()
