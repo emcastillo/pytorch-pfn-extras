@@ -342,9 +342,7 @@ class _Snapshot(extension.Extension):
                                    map_location=torch.device("cpu"))
                 if type(target) is dict:
                     for k in target:
-                        target[k].load_state_dict(
-                            state[k],
-                            map_location=torch.device("cpu"))
+                        target[k].load_state_dict(state[k])
                 else:
                     target.load_state_dict(state)
 
