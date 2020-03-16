@@ -350,7 +350,8 @@ class _Snapshot(extension.Extension):
                 # ``save_npz`` . In order to support general format,
                 # we nned to first reconstruct the design of savefun
                 # and loadfun.
-                state = torch.load(snapshot_file)
+                state = torch.load(snapshot_file,
+                                   map_location=torch.device("cpu"))
                 target.load_state_dict(state)
 
         if (hasattr(self.writer, '_add_cleanup_hook')
