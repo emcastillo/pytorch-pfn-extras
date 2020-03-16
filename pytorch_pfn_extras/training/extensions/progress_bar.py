@@ -65,7 +65,7 @@ class _ManagerProgressBar(util.ProgressBar):
         epoch = self.manager.updater.epoch_detail
 
         if self.training_length is None:
-            t = self.manager.stop_trigger
+            t = self.manager._stop_trigger
             self.training_length = t.get_training_length()
         length, unit = self.training_length
 

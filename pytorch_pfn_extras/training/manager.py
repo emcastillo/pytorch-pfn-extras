@@ -76,7 +76,7 @@ class _BaseExtensionsManager:
             out_dir='result'):
         if extensions is None:
             extensions = []
-        self.stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
+        self._stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
         self.observation = {}
         self._out = out_dir
         if not os.path.exists(self.out):
@@ -118,6 +118,10 @@ class _BaseExtensionsManager:
     @property
     def is_before_training(self):
         return self.updater is None or self.updater.iteration == 0
+
+    @property
+    def stop_trigger(self):
+        return self._stop_trigger(self)
 
     def _prepare_for_training(self, start_iteration, iters_per_epoch):
         assert self.updater is None
@@ -277,6 +281,9 @@ class ExtensionsManager(_BaseExtensionsManager):
         iters_per_epoch (int): Number of iterations in one epoch.
         extensions (list or None): List of Extentions to be used.
         out_dir (str): Output directory (default: ``result``).
+        stop_trigger (trigger object, optional) trigger that can be consulted
+           to determine wether training has concluded. The default is an
+           interval trigger set to `max_epochs`
     """
 
     def __init__(
@@ -287,7 +294,8 @@ class ExtensionsManager(_BaseExtensionsManager):
             *,
             iters_per_epoch,
             extensions=None,
-            out_dir='result'):
+            out_dir='result',
+            stop_trigger=None):
         super().__init__(
             models, optimizers, max_epochs, extensions, out_dir)
         if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
@@ -295,6 +303,8 @@ class ExtensionsManager(_BaseExtensionsManager):
                 'iters_per_epoch must be an integer >= 1 ({} given)'.format(
                     iters_per_epoch))
         self._prepare_for_training(0, iters_per_epoch)
+        if stop_trigger is not None:
+            self._stop_trigger = stop_trigger
 
     @contextlib.contextmanager
     def run_iteration(self):

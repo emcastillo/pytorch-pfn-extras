@@ -34,17 +34,18 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def train(manager, args, model, device, train_loader, optimizer, epoch):
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        with manager.run_iteration():
-            data, target = data.to(device), target.to(device)
-            optimizer.zero_grad()
-            output = model(data)
-            loss = F.nll_loss(output, target)
-            ppe.reporting.report({'train/loss': loss.item()})
-            loss.backward()
-            optimizer.step()
+def train(manager, args, model, device, train_loader, optimizer):
+    while not manager.stop_trigger:
+        model.train()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            with manager.run_iteration():
+                data, target = data.to(device), target.to(device)
+                optimizer.zero_grad()
+                output = model(data)
+                loss = F.nll_loss(output, target)
+                ppe.reporting.report({'train/loss': loss.item()})
+                loss.backward()
+                optimizer.step()
 
 
 def test(args, model, device, data, target):
@@ -145,19 +146,24 @@ def main():
     ]
     models = {'main': model}
     optimizers = {'main': optimizer}
+    # Custom stop triggers can be added to the manager and
+    # their status accessed through `manager.stop_trigger`
+    trigger = None
+    # trigger = ppe.training.triggers.EarlyStoppingTrigger(
+    #     check_trigger=(1, 'epoch'), monitor='val/loss')
     manager = ppe.training.ExtensionsManager(
         models, optimizers, args.epochs,
         extensions=my_extensions,
-        iters_per_epoch=len(train_loader))
+        iters_per_epoch=len(train_loader),
+        stop_trigger=trigger)
     # Lets load the snapshot
     if args.snapshot is not None:
         state = torch.load(args.snapshot)
         manager.load_state_dict(state)
-    for epoch in range(0, args.epochs):
-        train(manager, args, model, device, train_loader, optimizer, epoch)
-        # Test function is called from the evaluator extension
-        # to get access to the reporter and other facilities
-        # test(args, model, device, test_loader)
+    train(manager, args, model, device, train_loader, optimizer)
+    # Test function is called from the evaluator extension
+    # to get access to the reporter and other facilities
+    # test(args, model, device, test_loader)
 
     if (args.save_model):
         torch.save(model.state_dict(), "mnist_cnn.pt")
