@@ -3,6 +3,7 @@ import io
 import os
 import queue
 import shutil
+import sys
 import threading
 
 import torch
@@ -100,7 +101,13 @@ class _PosixFileSystem(object):
         return os.path.exists(file_path)
 
     def rename(self, src, dst):
-        return os.rename(src, dst)
+        try:
+            return os.rename(src, dst)
+        except FileExistsError:
+            print(
+                'Can\'t move {} to {} as file already exists'.format(src, dst),
+                file=sys.stderr)
+            raise
 
     def remove(self, file_path, recursive=False):
         if recursive:
@@ -130,6 +137,8 @@ class Writer:
         if fs is None:
             self.fs = _PosixFileSystem()
 
+        self._initialized = False
+
     def __call__(self, filename, outdir, target):
         """Invokes the actual snapshot function.
 
@@ -151,6 +160,7 @@ class Writer:
     def initialize(self, outdir):
         if not self.fs.exists(outdir):
             self.fs.makedirs(outdir)
+        self._initialized = True
 
     def __del__(self):
         self.finalize()
@@ -165,6 +175,8 @@ class Writer:
         pass
 
     def save(self, filename, outdir, target, savefun, **kwds):
+        if not self._initialized:
+            self.initialize(outdir)
         # Some filesystems are not compatible with temp folders, etc
         # so we rely on raw temp files
         prefix = 'tmp_{}'.format(filename)

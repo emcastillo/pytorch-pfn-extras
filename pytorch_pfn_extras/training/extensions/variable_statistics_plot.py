@@ -1,4 +1,3 @@
-import os
 import warnings
 
 import numpy
@@ -292,12 +291,9 @@ grid=True)
         self._samples.add(stats, idx=manager.updater.iteration)
 
         if self._trigger(manager):
-            if not os.path.exists(manager.out):
-                os.makedirs(manager.out)
-            file_path = os.path.join(manager.out, self._filename)
-            self.save_plot_using_module(file_path, plt, manager)
+            self.save_plot_using_module(plt, manager)
 
-    def save_plot_using_module(self, file_path, plt, manager):
+    def save_plot_using_module(self, plt, manager):
         nrows = int(self._plot_mean or self._plot_std) \
             + int(self._plot_percentile)
         ncols = len(self._keys)
