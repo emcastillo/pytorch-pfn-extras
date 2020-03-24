@@ -2,6 +2,7 @@ from pytorch_pfn_extras.training.extensions import snapshot_writers  # NOQA
 from pytorch_pfn_extras.training.extensions._snapshot import snapshot  # NOQA
 from pytorch_pfn_extras.training.extensions._snapshot import snapshot_object  # NOQA
 from pytorch_pfn_extras.training.extensions.evaluator import Evaluator, IgniteEvaluator  # NOQA
+from pytorch_pfn_extras.training.extensions.fail_on_non_number import FailOnNonNumber  # NOQA
 from pytorch_pfn_extras.training.extensions.log_report import LogReport  # NOQA
 from pytorch_pfn_extras.training.extensions.micro_average import MicroAverage  # NOQA
 from pytorch_pfn_extras.training.extensions.print_report import PrintReport  # NOQA
