@@ -69,14 +69,13 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_interval):
         device=device)
 
     # manager.extend(...) also works
-    writer = ppe.writing.SimpleWriter()
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),
         extensions.observe_lr(optimizer=optimizer),
         extensions.ParameterStatistics(model, prefix='model'),
         extensions.VariableStatisticsPlot(model),
-        extensions.snapshot(writer=writer),
+        extensions.snapshot(),
         extensions.IgniteEvaluator(
             evaluator, val_loader, model, progress_bar=True),
         extensions.PlotReport(['train/loss'], 'epoch', filename='loss.png'),

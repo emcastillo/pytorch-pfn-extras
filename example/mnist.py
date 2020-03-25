@@ -125,7 +125,6 @@ def main():
         model.parameters(), lr=args.lr, momentum=args.momentum)
 
     # manager.extend(...) also works
-    writer = ppe.writing.SimpleWriter()
     my_extensions = [
         extensions.LogReport(),
         extensions.ProgressBar(),
@@ -142,7 +141,7 @@ def main():
         extensions.PrintReport(['epoch', 'iteration',
                                 'train/loss', 'lr', 'model/fc2.bias/grad/min',
                                 'val/loss', 'val/acc']),
-        extensions.snapshot(writer=writer),
+        extensions.snapshot(),
     ]
     models = {'main': model}
     optimizers = {'main': optimizer}

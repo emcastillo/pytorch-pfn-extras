@@ -325,6 +325,8 @@ class _Snapshot(extension.Extension):
     def initialize(self, manager):
         target = manager if self._target is None else self._target
         outdir = manager.out
+        writer = manager.writer if self.writer is None else self.writer
+        self.writer = writer
         if self.autoload:
             # If ``autoload`` is on, this code scans the ``outdir``
             # for potential snapshot files by matching the file names
@@ -346,7 +348,7 @@ class _Snapshot(extension.Extension):
                                    map_location=torch.device("cpu"))
                 target.load_state_dict(state)
 
-        if (hasattr(self.writer, '_add_cleanup_hook')
+        if (hasattr(writer, '_add_cleanup_hook')
                 and self.n_retains > 0
                 and isinstance(self.filename, str)):
             # This block sets a method to automatic cleanup of stale
@@ -361,7 +363,7 @@ class _Snapshot(extension.Extension):
                 for file in files:
                     os.remove(os.path.join(outdir, file))
 
-            self.writer._add_cleanup_hook(_cleanup)
+            writer._add_cleanup_hook(_cleanup)
 
     def on_error(self, manager, exc, tb):
         super().on_error(manager, exc, tb)
@@ -374,8 +376,9 @@ class _Snapshot(extension.Extension):
 
     def _make_snapshot(self, manager):
         target = manager if self._target is None else self._target
-        # We need to get a dictionary with the sate here
         writer = manager.writer if self.writer is None else self.writer
+        self.writer = writer
+        # We need to get a dictionary with the sate here
         serialized_target = target.state_dict()
         filename = self.filename
         if callable(filename):

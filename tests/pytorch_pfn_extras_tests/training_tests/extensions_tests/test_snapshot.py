@@ -235,6 +235,7 @@ def test_remove_stale_snapshots(path):
 
     pattern = os.path.join(trainer.out, "snapshot_iter_*")
     found = [os.path.basename(path) for path in glob.glob(pattern)]
+    print(found)
     assert retain == len(found)
     found.sort()
     # snapshot_iter_(8, 9, 10) expected
