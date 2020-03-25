@@ -4,7 +4,6 @@ import torch
 import torch.distributed
 
 from pytorch_pfn_extras.training import extension
-from pytorch_pfn_extras import writing
 
 
 def _find_snapshot_files(fmt, path):
@@ -275,19 +274,15 @@ trigger=(1, 'epoch'))
         raise TypeError(
             'savefun and writer arguments cannot be specified together.')
 
-    if writer is None:
-        if savefun is None:
-            savefun = torch.save
-        writer = writing.SimpleWriter(savefun=savefun)
     if saver_rank is None:
         return _Snapshot(
             target=target, condition=condition, writer=writer,
             filename=filename, snapshot_on_error=snapshot_on_error,
-            n_retains=n_retains, autoload=autoload)
+            n_retains=n_retains, autoload=autoload, savefun=savefun)
     return _DistributedSnapshot(
         target=target, condition=condition, writer=writer, filename=filename,
         snapshot_on_error=snapshot_on_error, n_retains=n_retains,
-        autoload=autoload, saver_rank=saver_rank)
+        autoload=autoload, saver_rank=saver_rank, savefun=savefun)
 
 
 def _always_true():
@@ -314,11 +309,10 @@ class _Snapshot(extension.Extension):
     def __init__(
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
-            snapshot_on_error=False, n_retains=-1, autoload=False):
+            snapshot_on_error=False, n_retains=-1, autoload=False,
+            savefun=None):
         if condition is None:
             condition = _always_true
-        if writer is None:
-            writer = writing.SimpleWriter()
         self._target = target
         self.filename = filename
         self.condition = condition
@@ -326,6 +320,7 @@ class _Snapshot(extension.Extension):
         self._snapshot_on_error = snapshot_on_error
         self.n_retains = n_retains
         self.autoload = autoload
+        self._savefun = savefun
 
     def initialize(self, manager):
         target = manager if self._target is None else self._target
@@ -380,6 +375,7 @@ class _Snapshot(extension.Extension):
     def _make_snapshot(self, manager):
         target = manager if self._target is None else self._target
         # We need to get a dictionary with the sate here
+        writer = manager.writer if self.writer is None else self.writer
         serialized_target = target.state_dict()
         filename = self.filename
         if callable(filename):
@@ -387,7 +383,7 @@ class _Snapshot(extension.Extension):
         else:
             filename = filename.format(manager)
         outdir = manager.out
-        self.writer(filename, outdir, serialized_target)
+        writer(filename, outdir, serialized_target, savefun=self._savefun)
 
     def finalize(self):
         if hasattr(self.writer, 'finalize'):
@@ -415,10 +411,10 @@ class _DistributedSnapshot(_Snapshot):
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
             snapshot_on_error=False, n_retains=-1, autoload=False,
-            saver_rank=0):
+            saver_rank=0, savefun=None):
         super().__init__(target, condition, writer, filename,
                          snapshot_on_error, n_retains,
-                         autoload)
+                         autoload, savefun)
         # To support distributed snapshots
         self._saver_rank = saver_rank
         self._size, self._rank, self._local_rank = _get_ranks_from_env()

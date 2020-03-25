@@ -102,11 +102,11 @@ class _PosixFileSystem(object):
 
     def rename(self, src, dst):
         try:
-            return os.rename(src, dst)
-        except FileExistsError:
-            print(
-                'Can\'t move {} to {} as file already exists'.format(src, dst),
-                file=sys.stderr)
+            return os.replace(src, dst)
+        except OSError:
+            print('Destination {} is a directory '
+                  'but source is not'.format(src),
+                  file=sys.stderr)
             raise
 
     def remove(self, file_path, recursive=False):
@@ -131,9 +131,10 @@ class Writer:
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, fs=None):
+    def __init__(self, fs=None, outdir=None):
         self._post_save_hooks = []
         self.fs = fs
+        self.outdir = outdir
         if fs is None:
             self.fs = _PosixFileSystem()
 
@@ -175,6 +176,8 @@ class Writer:
         pass
 
     def save(self, filename, outdir, target, savefun, **kwds):
+        if self.outdir is not None:
+            outdir = self.outdir
         if not self._initialized:
             self.initialize(outdir)
         # Some filesystems are not compatible with temp folders, etc
@@ -224,6 +227,9 @@ class SimpleWriter(Writer):
             arguments.
         fs: FileSystem abstracting interface to implement all the operations.
             optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         kwds: Keyword arguments for the ``savefun``.
 
     .. seealso::
@@ -231,8 +237,8 @@ class SimpleWriter(Writer):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, fs=None, **kwds):
-        super().__init__(fs=fs)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(fs=fs, outdir=outdir)
         self._savefun = savefun
         self._kwds = kwds
 
@@ -252,6 +258,11 @@ class StandardWriter(Writer):
         savefun: Callable object. It takes three arguments: the output file
             path, the serialized dictionary object, and the optional keyword
             arguments.
+        fs: FileSystem abstracting interface to implement all the operations.
+            optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         kwds: Keyword arguments for the ``savefun``.
 
     .. seealso::
@@ -263,8 +274,8 @@ class StandardWriter(Writer):
     _finalized = False
     _worker = None
 
-    def __init__(self, savefun=torch.save, fs=None, **kwds):
-        super().__init__(fs=fs)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(fs=fs, outdir=outdir)
         self._savefun = savefun
         self._kwds = kwds
         self._started = False
@@ -316,8 +327,8 @@ class ThreadWriter(StandardWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, fs=None, **kwds):
-        super().__init__(savefun=savefun, fs=fs, **kwds)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return threading.Thread(
@@ -341,8 +352,8 @@ class ProcessWriter(StandardWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, fs=None, **kwds):
-        super().__init__(savefun=savefun, fs=fs, **kwds)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return multiprocessing.Process(
@@ -363,6 +374,11 @@ class QueueWriter(Writer):
             if the task is ``None``. It takes three arguments: the output file
             path, the serialized dictionary object, and the optional keyword
             arguments.
+        fs: FileSystem abstracting interface to implement all the operations.
+            optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         task: Callable object. Its ``__call__`` must have a same interface to
             ``Writer.__call__``. This object is directly put into the queue.
 
@@ -376,8 +392,8 @@ class QueueWriter(Writer):
     _queue = None
     _consumer = None
 
-    def __init__(self, savefun=torch.save, fs=None, task=None):
-        super().__init__(fs=fs)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(fs=fs, outdir=outdir)
         if task is None:
             self._task = self.create_task(savefun)
         else:
@@ -433,8 +449,8 @@ class ThreadQueueWriter(QueueWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, fs=None, task=None):
-        super().__init__(savefun=savefun, fs=fs, task=task)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(savefun=savefun, fs=fs, task=task, outdir=outdir)
 
     def create_queue(self):
         return queue.Queue()
@@ -460,8 +476,8 @@ class ProcessQueueWriter(QueueWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, fs=None, task=None):
-        super().__init__(savefun=savefun, fs=fs, task=task)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, task=task)
 
     def create_queue(self):
         return multiprocessing.JoinableQueue()
