@@ -8,6 +8,7 @@ from unittest import mock
 import torch
 import pytest
 
+import pytorch_pfn_extras as ppe
 from pytorch_pfn_extras import training
 from pytorch_pfn_extras.training import extensions
 from pytorch_pfn_extras.training.extensions._snapshot import (
@@ -121,7 +122,8 @@ def test_find_snapshot_files(fmt, path):
         file = os.path.join(path, file)
         open(file, 'w').close()
 
-    snapshot_files = _find_snapshot_files(fmt, path)
+    writer = ppe.writing.SimpleWriter()
+    snapshot_files = _find_snapshot_files(fmt, path, writer.fs)
 
     expected = sorted([fmt.format(i) for i in range(1, 100)])
     assert len(snapshot_files) == 99
@@ -152,8 +154,8 @@ def test_find_latest_snapshot(fmt, path):
         # in this file on snapshot freshness.
         t = base_timestamp + i
         os.utime(file, (t, t))
-
-    assert fmt.format(99) == _find_latest_snapshot(fmt, path)
+    writer = ppe.writing.SimpleWriter()
+    assert fmt.format(99) == _find_latest_snapshot(fmt, path, writer.fs)
 
 
 @pytest.mark.parametrize('fmt', [
@@ -172,7 +174,8 @@ def test_find_snapshot_files2(fmt, path):
         file = os.path.join(path, file)
         open(file, 'w').close()
 
-    snapshot_files = _find_snapshot_files(fmt, path)
+    writer = ppe.writing.SimpleWriter()
+    snapshot_files = _find_snapshot_files(fmt, path, writer.fs)
 
     expected = [fmt.format(i*10, j*10)
                 for i, j in itertools.product(range(0, 10), range(0, 10))]
@@ -201,7 +204,8 @@ def test_find_stale_snapshot(length_retain, path):
         t = base_timestamp + i
         os.utime(file, (t, t))
 
-    stale = list(_find_stale_snapshots(fmt, path, retain))
+    writer = ppe.writing.SimpleWriter()
+    stale = list(_find_stale_snapshots(fmt, path, retain, writer.fs))
     assert max(length-retain, 0) == len(stale)
     expected = [fmt.format(i) for i in range(0, max(length-retain, 0))]
     assert expected == stale

@@ -6,7 +6,7 @@ import torch.distributed
 from pytorch_pfn_extras.training import extension
 
 
-def _find_snapshot_files(fmt, path):
+def _find_snapshot_files(fmt, path, fs):
     '''Only prefix and suffix match
 
     TODO(kuenishi): currently clean format string such as
@@ -29,17 +29,17 @@ def _find_snapshot_files(fmt, path):
     prefix = fmt.split('{')[0]
     suffix = fmt.split('}')[-1]
 
-    matched_files = (file for file in os.listdir(path)
+    matched_files = (file for file in fs.list(path)
                      if file.startswith(prefix) and file.endswith(suffix))
 
     def _prepend_mtime(f):
-        t = os.stat(os.path.join(path, f)).st_mtime
+        t = fs.stat(os.path.join(path, f)).st_mtime
         return (t, f)
 
     return sorted(_prepend_mtime(file) for file in matched_files)
 
 
-def _find_latest_snapshot(fmt, path):
+def _find_latest_snapshot(fmt, path, fs):
     """Finds the latest snapshots in a directory
 
     Args:
@@ -55,7 +55,7 @@ def _find_latest_snapshot(fmt, path):
         ``path``. If no such file found, it returns ``None``.
 
     """
-    snapshot_files = _find_snapshot_files(fmt, path)
+    snapshot_files = _find_snapshot_files(fmt, path, fs)
 
     if len(snapshot_files) > 0:
         _, filename = snapshot_files[-1]
@@ -64,7 +64,7 @@ def _find_latest_snapshot(fmt, path):
     return None
 
 
-def _find_stale_snapshots(fmt, path, n_retains):
+def _find_stale_snapshots(fmt, path, n_retains, fs):
     """Finds stale snapshots in a directory, retaining several files
 
     Args:
@@ -83,7 +83,7 @@ def _find_stale_snapshots(fmt, path, n_retains):
         excluding newest ``n_retains`` files.
 
     """
-    snapshot_files = _find_snapshot_files(fmt, path)
+    snapshot_files = _find_snapshot_files(fmt, path, fs)
     num_remove = len(snapshot_files) - n_retains
     if num_remove > 0:
         for _, filename in snapshot_files[:num_remove]:
@@ -333,12 +333,12 @@ class _Snapshot(extension.Extension):
             # from ``filename`` format, picks up the latest one in
             # terms of mtime, and tries to load it it the target or
             # manager.
-            filename = _find_latest_snapshot(self.filename, outdir)
+            filename = _find_latest_snapshot(self.filename, outdir, writer.fs)
             if filename is None:
                 print('No snapshot file that matches {} was found'
                       .format(self.filename))
             else:
-                snapshot_file = os.path.join(outdir, filename)
+                snapshot_file = writer.fs.open(os.path.join(outdir, filename))
                 # As described above (at ``autoload`` option),
                 # snapshot files to be autoloaded must be saved by
                 # ``save_npz`` . In order to support general format,
@@ -359,9 +359,9 @@ class _Snapshot(extension.Extension):
             # injected here.
             def _cleanup():
                 files = _find_stale_snapshots(self.filename, outdir,
-                                              self.n_retains)
+                                              self.n_retains, writer.fs)
                 for file in files:
-                    os.remove(os.path.join(outdir, file))
+                    writer.fs.remove(os.path.join(outdir, file))
 
             writer._add_cleanup_hook(_cleanup)
 
