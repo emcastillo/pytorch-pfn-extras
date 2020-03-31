@@ -1,4 +1,5 @@
 import collections
+import copy
 import contextlib
 import os
 import time
@@ -73,10 +74,17 @@ class _BaseExtensionsManager:
             optimizers,
             max_epochs,
             extensions,
-            out_dir='result'):
+            out_dir='result',
+            stop_trigger=None):
         if extensions is None:
             extensions = []
-        self._stop_trigger = trigger_module.get_trigger((max_epochs, 'epoch'))
+        if stop_trigger is None:
+            self._stop_trigger = trigger_module.get_trigger(
+                (max_epochs, 'epoch'))
+        else:
+            self._stop_trigger = stop_trigger
+        # triggers are stateful, so we need to make a copy for internal use
+        self._internal_stop_trigger = copy.deepcopy(self._stop_trigger)
         self.observation = {}
         self._out = out_dir
         if not os.path.exists(self.out):
@@ -121,6 +129,8 @@ class _BaseExtensionsManager:
 
     @property
     def stop_trigger(self):
+        # Trigger is stateful, we close the extensions the first time
+        # it evaluates to True, as it won't do it again
         return self._stop_trigger(self)
 
     def _prepare_for_training(self, start_iteration, iters_per_epoch):
@@ -240,6 +250,16 @@ class _BaseExtensionsManager:
             if entry.trigger(self):
                 entry.extension(self)
 
+    def _finalize_extensions(self):
+        for _, entry in self.extensions:
+            # Some mock objects for tests give errors
+            # if we use `getattr`
+            try:
+                if getattr(entry.extension, 'finalize'):
+                    entry.extension.finalize()
+            except AttributeError:
+                pass
+
     def state_dict(self):
         to_save = {}
         if self.updater is not None:
@@ -297,14 +317,12 @@ class ExtensionsManager(_BaseExtensionsManager):
             out_dir='result',
             stop_trigger=None):
         super().__init__(
-            models, optimizers, max_epochs, extensions, out_dir)
+            models, optimizers, max_epochs, extensions, out_dir, stop_trigger)
         if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
             raise ValueError(
                 'iters_per_epoch must be an integer >= 1 ({} given)'.format(
                     iters_per_epoch))
         self._prepare_for_training(0, iters_per_epoch)
-        if stop_trigger is not None:
-            self._stop_trigger = stop_trigger
 
     @contextlib.contextmanager
     def run_iteration(self):
@@ -323,6 +341,9 @@ class ExtensionsManager(_BaseExtensionsManager):
                 # to keep the semantics
                 self.updater.iteration += 1
                 self.run_extensions()
+
+        if self._internal_stop_trigger(self):
+            self._finalize_extensions()
 
 
 class IgniteExtensionsManager(_BaseExtensionsManager):
@@ -384,6 +405,10 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             @self.engine.on(Events.ITERATION_COMPLETED)
             def close_reporter_on_iter(engine):
                 self.cm.__exit__(None, None, None)
+
+        @self.engine.on(Events.COMPLETED)
+        def set_extensions_cleanup(engine):
+            self._finalize_extensions()
 
     def state_dict(self):
         to_save = super().state_dict()
