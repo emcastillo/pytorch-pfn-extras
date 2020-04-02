@@ -1,7 +1,5 @@
 import unittest
 
-from chainer import testing
-
 from pytorch_pfn_extra.config import Config
 from pytorch_pfn_extra.config import customize_type
 
@@ -92,6 +90,3 @@ class TestConfig(unittest.TestCase):
         config = Config({'foo': '@/bar', 'bar': '@foo.d'})
         with self.assertRaises(RuntimeError):
             config['/']
-
-
-testing.run_module(__name__, __file__)
