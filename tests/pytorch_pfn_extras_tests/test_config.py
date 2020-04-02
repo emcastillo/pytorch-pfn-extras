@@ -1,7 +1,7 @@
 import unittest
 
-from pytorch_pfn_extra.config import Config
-from pytorch_pfn_extra.config import customize_type
+from pytorch_pfn_extras.config import Config
+from pytorch_pfn_extras.config import customize_type
 
 
 def func_0(a, b, c=10):

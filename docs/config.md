@@ -1,11 +1,11 @@
 # Config system
 
 Algorithm configurations such as training hyperparameters are serialized as nested mappings often using the YAML format.  
-Nested mappings are parsed by `pytorch_pfn_extra.config.Config` that returns a dictionary of objects that are lazily evaluated.
+Nested mappings are parsed by `pytorch_pfn_extras.config.Config` that returns a dictionary of objects that are lazily evaluated.
 The most notable feature is a special handling of the `type` key, which invokes a function or instantiates an object. The arguments for them are mapped by non-`type` keys.
 ```python 
 import yaml
-from pytorch_pfn_extra.config import Config
+from pytorch_pfn_extras.config import Config
 from torchvision.models.resnet import resnet50
 
 types = {
