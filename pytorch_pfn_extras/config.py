@@ -1,10 +1,8 @@
 import reprlib
 
 
-def customize_type(kwargs_map=None, **default_kwargs):
+def customize_type(**default_kwargs):
     def deco(type_):
-        if kwargs_map is not None:
-            type_._custom_kwargs_map = kwargs_map
         type_._custom_default_kwargs = default_kwargs
         return type_
     return deco
@@ -70,9 +68,6 @@ class Config(object):
             for k, v in getattr(type_, '_custom_default_kwargs', {}).items():
                 if k not in kwargs:
                     kwargs[k] = self._eval(*_parse_key(v, config_key), trace)
-
-            if hasattr(type_, '_custom_kwargs_map'):
-                kwargs = type_._custom_kwargs_map(**kwargs)
 
             try:
                 self._cache[config_key] = type_(**kwargs)

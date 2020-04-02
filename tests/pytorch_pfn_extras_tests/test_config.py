@@ -8,9 +8,9 @@ def func_0(a, b, c=10):
     return a + b + c
 
 
-@customize_type(lambda a, b, c: {'d': a * b, 'e': c}, c='/foo/v0')
-def func_1(d, e):
-    return {'d': d, 'e': e}
+@customize_type(c='/foo/v0')
+def func_1(a, b):
+    return {'d': a * b, 'e': c}
 
 
 class Cls0(object):
@@ -24,12 +24,12 @@ class Cls0(object):
         return (self.a, self.b, self.c) == (other.a, other.b, other.c)
 
 
-@customize_type(lambda a, b, c: {'d': a * b, 'e': c}, c='../../foo/v0')
+@customize_type(c='../../foo/v0')
 class Cls1(object):
 
-    def __init__(self, d, e):
-        self.d = d
-        self.e = e
+    def __init__(self, a, b, c):
+        self.d = a * b
+        self.e = c
 
     def __eq__(self, other):
         return (self.d, self.e) == (other.d, other.e)
