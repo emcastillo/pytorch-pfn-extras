@@ -15,6 +15,5 @@ setuptools.setup(
         'pytorch_pfn_extras.training',
         'pytorch_pfn_extras.training.extensions',
         'pytorch_pfn_extras.training.triggers',
-        'pytorch_pfn_extras.writing',
     ],
 )

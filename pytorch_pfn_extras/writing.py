@@ -126,6 +126,12 @@ class Writer:
     invokes ``__call__`` of this class every time when taking a snapshot.
     This class determines how the actual saving function will be invoked.
 
+    .. note::
+       This extension first writes the serialized object to a temporary file
+       and then rename it to the target file name. Thus, if the program stops
+       right before the renaming, the temporary file might be left in the
+       output directory.
+
     .. seealso::
 
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`

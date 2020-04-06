@@ -180,12 +180,6 @@ def snapshot(savefun=None,
     The default priority is -100, which is lower than that of most
     built-in extensions.
 
-    .. note::
-       This extension first writes the serialized object to a temporary file
-       and then rename it to the target file name. Thus, if the program stops
-       right before the renaming, the temporary file might be left in the
-       output directory.
-
     Args:
         savefun: Function to save the manager. It takes two arguments: the
             output file path and the manager object.
