@@ -4,6 +4,8 @@ import contextlib
 import os
 import time
 
+import torch
+
 from pytorch_pfn_extras.training import extension as extension_module
 from pytorch_pfn_extras.training import trigger as trigger_module
 from pytorch_pfn_extras.training import util as util_module
@@ -92,10 +94,15 @@ class _BaseExtensionsManager:
         self.reporter = Reporter()
 
         if not isinstance(models, dict):
+            if not isinstance(models, torch.nn.Module):
+                raise ValueError(
+                    'model must be an instance of dict or toch.nn.Module')
             self._models = {'main': models}
         else:
             self._models = models
         if not isinstance(optimizers, dict):
+            # TODO(ecastill) Optimizer type is not checked because of tests
+            # using mocks and other classes
             self._optimizers = {'main': optimizers}
         else:
             self._optimizers = optimizers
