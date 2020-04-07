@@ -3,15 +3,15 @@ import threading
 import tempfile
 from unittest import mock
 
-from pytorch_pfn_extras.training.extensions import snapshot_writers
+from pytorch_pfn_extras import writing
 
 
-spshot_writers_path = 'pytorch_pfn_extras.training.extensions.snapshot_writers'
+spshot_writers_path = 'pytorch_pfn_extras.writing'
 
 
 def test_simple_writer():
     target = mock.MagicMock()
-    w = snapshot_writers.SimpleWriter()
+    w = writing.SimpleWriter()
     w.save = mock.MagicMock()
     with tempfile.TemporaryDirectory() as tempd:
         w('myfile.dat', tempd, target)
@@ -21,7 +21,7 @@ def test_simple_writer():
 
 def test_standard_writer():
     target = mock.MagicMock()
-    w = snapshot_writers.StandardWriter()
+    w = writing.StandardWriter()
     worker = mock.MagicMock()
     name = spshot_writers_path + '.StandardWriter.create_worker'
     with mock.patch(name, return_value=worker):
@@ -36,7 +36,7 @@ def test_standard_writer():
 
 def test_thread_writer_create_worker():
     target = mock.MagicMock()
-    w = snapshot_writers.ThreadWriter()
+    w = writing.ThreadWriter()
     with tempfile.TemporaryDirectory() as tempd:
         worker = w.create_worker('myfile.dat', tempd, target)
         assert isinstance(worker, threading.Thread)
@@ -44,7 +44,7 @@ def test_thread_writer_create_worker():
 
 def test_process_writer_create_worker():
     target = mock.MagicMock()
-    w = snapshot_writers.ProcessWriter()
+    w = writing.ProcessWriter()
     with tempfile.TemporaryDirectory() as tempd:
         worker = w.create_worker('myfile.dat', tempd, target)
         assert isinstance(worker, multiprocessing.Process)
@@ -58,7 +58,7 @@ def test_queue_writer():
              spshot_writers_path + '.QueueWriter.create_consumer']
     with mock.patch(names[0], return_value=q):
         with mock.patch(names[1], return_value=consumer):
-            w = snapshot_writers.QueueWriter()
+            w = writing.QueueWriter()
 
             with tempfile.TemporaryDirectory() as tempd:
                 w('myfile.dat', tempd, target)
@@ -79,7 +79,7 @@ def test_queue_writer_consume():
             task = mock.MagicMock()
             q = mock.MagicMock()
             q.get = mock.MagicMock(side_effect=[task, task, None])
-            w = snapshot_writers.QueueWriter()
+            w = writing.QueueWriter()
             w.consume(q)
 
             assert q.get.call_count == 3

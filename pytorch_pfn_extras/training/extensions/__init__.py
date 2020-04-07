@@ -1,4 +1,3 @@
-from pytorch_pfn_extras.training.extensions import snapshot_writers  # NOQA
 from pytorch_pfn_extras.training.extensions._snapshot import snapshot  # NOQA
 from pytorch_pfn_extras.training.extensions._snapshot import snapshot_object  # NOQA
 from pytorch_pfn_extras.training.extensions.evaluator import Evaluator, IgniteEvaluator  # NOQA

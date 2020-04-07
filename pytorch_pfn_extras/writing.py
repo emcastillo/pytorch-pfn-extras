@@ -1,11 +1,121 @@
 import multiprocessing
+import io
 import os
 import queue
 import shutil
-import tempfile
+import sys
 import threading
 
 import torch
+
+
+def open_wrapper(func):
+    def wrapper(self, file_path, mode='rb',
+                buffering=-1, encoding=None,
+                errors=None, newline=None,
+                closefd=True,
+                opener=None):
+        file_obj = func(self, file_path, mode, buffering, encoding,
+                        errors, newline, closefd, opener)
+        return self._wrap_fileobject(
+            file_obj, file_path, mode, buffering, encoding,
+            errors, newline, closefd, opener)
+    return wrapper
+
+
+class _PosixFileSystem(object):
+    """Class to abstract the calls to the FileSystem
+
+    This class obbeys the same interface as chainerIO
+    Filesystems declarations. When using HDFS, chainerIO
+    handler can be used instead.
+
+    This class currently abstracts POSIX
+    """
+    def __init__(self):
+        pass
+
+    def get_actual_path(self, path):
+        return os.path.join(self.root, path)
+
+    def _wrap_fileobject(self, file_obj, file_path, *args, **kwargs):
+        return file_obj
+
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, root):
+        self._root = root
+
+    @open_wrapper
+    def open(self, file_path, mode='r',
+             buffering=-1, encoding=None, errors=None,
+             newline=None, closefd=True, opener=None):
+
+        return io.open(file_path, mode,
+                       buffering, encoding, errors,
+                       newline, closefd, opener)
+
+    def list(self, path_or_prefix: str = None, recursive=False):
+        if recursive:
+            path_or_prefix = path_or_prefix.rstrip("/")
+            # plus 1 to include the trailing slash
+            prefix_end_index = len(path_or_prefix) + 1
+            yield from self._recursive_list(prefix_end_index, path_or_prefix)
+        else:
+            for file in os.scandir(path_or_prefix):
+                yield file.name
+
+    def _recursive_list(self, prefix_end_index: int, path: str):
+        for file in os.scandir(path):
+            yield file.path[prefix_end_index:]
+
+            if file.is_dir():
+                yield from self._recursive_list(prefix_end_index,
+                                                file.path)
+
+    def stat(self, path):
+        return os.stat(path)
+
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def isdir(self, file_path):
+        return os.path.isdir(file_path)
+
+    def mkdir(self, file_path, mode=0o777, *args, dir_fd=None):
+        return os.mkdir(file_path, mode, *args, dir_fd=None)
+
+    def makedirs(self, file_path, mode=0o777, exist_ok=False):
+        return os.makedirs(file_path, mode, exist_ok)
+
+    def exists(self, file_path):
+        return os.path.exists(file_path)
+
+    def rename(self, src, dst):
+        try:
+            return os.replace(src, dst)
+        except OSError:
+            print('Destination {} is a directory '
+                  'but source is not'.format(src),
+                  file=sys.stderr)
+            raise
+
+    def remove(self, file_path, recursive=False):
+        if recursive:
+            return shutil.rmtree(file_path)
+        if os.path.isdir(file_path):
+            return os.rmdir(file_path)
+
+        return os.remove(file_path)
 
 
 class Writer:
@@ -16,13 +126,25 @@ class Writer:
     invokes ``__call__`` of this class every time when taking a snapshot.
     This class determines how the actual saving function will be invoked.
 
+    .. note::
+       This extension first writes the serialized object to a temporary file
+       and then rename it to the target file name. Thus, if the program stops
+       right before the renaming, the temporary file might be left in the
+       output directory.
+
     .. seealso::
 
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self):
+    def __init__(self, fs=None, outdir=None):
         self._post_save_hooks = []
+        self.fs = fs
+        self.outdir = outdir
+        if fs is None:
+            self.fs = _PosixFileSystem()
+
+        self._initialized = False
 
     def __call__(self, filename, outdir, target):
         """Invokes the actual snapshot function.
@@ -42,6 +164,11 @@ class Writer:
         """
         raise NotImplementedError
 
+    def initialize(self, outdir):
+        if not self.fs.exists(outdir):
+            self.fs.makedirs(outdir)
+        self._initialized = True
+
     def __del__(self):
         self.finalize()
 
@@ -55,11 +182,25 @@ class Writer:
         pass
 
     def save(self, filename, outdir, target, savefun, **kwds):
-        prefix = 'tmp' + filename
-        with tempfile.TemporaryDirectory(prefix=prefix, dir=outdir) as tmpdir:
-            tmppath = os.path.join(tmpdir, filename)
-            savefun(target, tmppath)
-            shutil.move(tmppath, os.path.join(outdir, filename))
+        if self.outdir is not None:
+            outdir = self.outdir
+        if not self._initialized:
+            self.initialize(outdir)
+        # Some filesystems are not compatible with temp folders, etc
+        # so we rely on raw temp files
+        prefix = 'tmp_{}'.format(filename)
+        dest = os.path.join(outdir, filename)
+        tmppath = os.path.join(outdir, prefix)
+        make_backup = self.fs.exists(dest)
+        if make_backup:
+            bak = '{}.bak'.format(dest)
+            self.fs.rename(dest, bak)
+        with self.fs.open(tmppath, 'wb') as f:
+            # HDFS does not support overwrite
+            savefun(target, f)
+            self.fs.rename(tmppath, dest)
+        if make_backup:
+            self.fs.remove(bak)
 
         self._post_save()
 
@@ -90,6 +231,11 @@ class SimpleWriter(Writer):
         savefun: Callable object. It takes three arguments: the output file
             path, the serialized dictionary object, and the optional keyword
             arguments.
+        fs: FileSystem abstracting interface to implement all the operations.
+            optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         kwds: Keyword arguments for the ``savefun``.
 
     .. seealso::
@@ -97,13 +243,15 @@ class SimpleWriter(Writer):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, **kwds):
-        super().__init__()
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(fs=fs, outdir=outdir)
         self._savefun = savefun
         self._kwds = kwds
 
-    def __call__(self, filename, outdir, target):
-        self.save(filename, outdir, target, self._savefun, **self._kwds)
+    def __call__(self, filename, outdir, target, *, savefun=None):
+        if savefun is None:
+            savefun = self._savefun
+        self.save(filename, outdir, target, savefun, **self._kwds)
 
 
 class StandardWriter(Writer):
@@ -116,6 +264,11 @@ class StandardWriter(Writer):
         savefun: Callable object. It takes three arguments: the output file
             path, the serialized dictionary object, and the optional keyword
             arguments.
+        fs: FileSystem abstracting interface to implement all the operations.
+            optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         kwds: Keyword arguments for the ``savefun``.
 
     .. seealso::
@@ -127,24 +280,26 @@ class StandardWriter(Writer):
     _finalized = False
     _worker = None
 
-    def __init__(self, savefun=torch.save, **kwds):
-        super().__init__()
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(fs=fs, outdir=outdir)
         self._savefun = savefun
         self._kwds = kwds
         self._started = False
         self._finalized = False
 
-    def __call__(self, filename, outdir, target):
+    def __call__(self, filename, outdir, target, *, savefun=None):
+        if savefun is None:
+            savefun = self._savefun
         if self._started:
             self._worker.join()
             self._started = False
         self._filename = filename
         self._worker = self.create_worker(filename, outdir, target,
-                                          **self._kwds)
+                                          savefun, **self._kwds)
         self._worker.start()
         self._started = True
 
-    def create_worker(self, filename, outdir, target, **kwds):
+    def create_worker(self, filename, outdir, target, savefun, **kwds):
         """Creates a worker for the snapshot.
 
         This method creates a thread or a process to take a snapshot. The
@@ -178,8 +333,8 @@ class ThreadWriter(StandardWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, **kwds):
-        super().__init__(savefun=savefun, **kwds)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return threading.Thread(
@@ -203,8 +358,8 @@ class ProcessWriter(StandardWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, **kwds):
-        super().__init__(savefun=savefun, **kwds)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, **kwds):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, **kwds)
 
     def create_worker(self, filename, outdir, target, **kwds):
         return multiprocessing.Process(
@@ -225,6 +380,11 @@ class QueueWriter(Writer):
             if the task is ``None``. It takes three arguments: the output file
             path, the serialized dictionary object, and the optional keyword
             arguments.
+        fs: FileSystem abstracting interface to implement all the operations.
+            optional, defaults to None
+        outdir: str. Specifies the directory this writer will use.
+            It takes precedence over the one specified in `__call__`
+            optional, defaults to None
         task: Callable object. Its ``__call__`` must have a same interface to
             ``Writer.__call__``. This object is directly put into the queue.
 
@@ -238,8 +398,8 @@ class QueueWriter(Writer):
     _queue = None
     _consumer = None
 
-    def __init__(self, savefun=torch.save, task=None):
-        super().__init__()
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(fs=fs, outdir=outdir)
         if task is None:
             self._task = self.create_task(savefun)
         else:
@@ -250,8 +410,8 @@ class QueueWriter(Writer):
         self._started = True
         self._finalized = False
 
-    def __call__(self, filename, outdir, target):
-        self._queue.put([self._task, filename, outdir, target])
+    def __call__(self, filename, outdir, target, *, savefun=None):
+        self._queue.put([self._task, filename, outdir, target, savefun])
 
     def create_task(self, savefun):
         return SimpleWriter(savefun=savefun)
@@ -269,7 +429,7 @@ class QueueWriter(Writer):
                 q.task_done()
                 return
             else:
-                task[0](task[1], task[2], task[3])
+                task[0](task[1], task[2], task[3], savefun=task[4])
                 q.task_done()
 
     def finalize(self):
@@ -295,8 +455,8 @@ class ThreadQueueWriter(QueueWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, task=None):
-        super().__init__(savefun=savefun, task=task)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(savefun=savefun, fs=fs, task=task, outdir=outdir)
 
     def create_queue(self):
         return queue.Queue()
@@ -322,8 +482,8 @@ class ProcessQueueWriter(QueueWriter):
         - :meth:`pytorch_pfn_extras.training.extensions.snapshot`
     """
 
-    def __init__(self, savefun=torch.save, task=None):
-        super().__init__(savefun=savefun, task=task)
+    def __init__(self, savefun=torch.save, fs=None, outdir=None, task=None):
+        super().__init__(savefun=savefun, fs=fs, outdir=outdir, task=task)
 
     def create_queue(self):
         return multiprocessing.JoinableQueue()

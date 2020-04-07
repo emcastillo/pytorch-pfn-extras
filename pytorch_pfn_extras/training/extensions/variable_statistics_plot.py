@@ -1,4 +1,3 @@
-import os
 import warnings
 
 import numpy
@@ -15,6 +14,12 @@ def percentile(a, q, axis):
     # fallback to numpy
     return torch.Tensor(
         numpy.percentile(a.cpu().numpy(), q, axis))
+
+
+def matplotlib_savefun(target, file_o):
+    fig, plt = target
+    fig.savefig(file_o)
+    plt.close()
 
 
 def _try_import_matplotlib():
@@ -186,6 +191,10 @@ grid=True)
         grid (bool):
             Matplotlib ``grid`` argument that specifies whether grids are
             rendered in in the plots or not.
+        writer (writer object, optional): must be callable.
+            object to dump the log to. If specified, it needs to have a correct
+            `savefun` defined. The writer can override the save location in
+            the :class:`pytorch_pfn_extras.training.ExtensionsManager` object
     """
 
     def __init__(self, targets, max_sample_size=1000,
@@ -232,6 +241,7 @@ grid=True)
         self._figsize = figsize
         self._marker = marker
         self._grid = grid
+        self._writer = kwargs.get('writer', None)
 
         if not self._plot_percentile:
             n_percentile = 0
@@ -281,10 +291,9 @@ grid=True)
         self._samples.add(stats, idx=manager.updater.iteration)
 
         if self._trigger(manager):
-            file_path = os.path.join(manager.out, self._filename)
-            self.save_plot_using_module(file_path, plt)
+            self.save_plot_using_module(plt, manager)
 
-    def save_plot_using_module(self, file_path, plt):
+    def save_plot_using_module(self, plt, manager):
         nrows = int(self._plot_mean or self._plot_std) \
             + int(self._plot_percentile)
         ncols = len(self._keys)
@@ -307,6 +316,8 @@ grid=True)
         n_percentile = data.shape[-1] - offset
         n_percentile_mid_floor = n_percentile // 2
         n_percentile_odd = n_percentile % 2 == 1
+
+        writer = manager.writer if self._writer is None else self._writer
 
         for col in range(ncols):
             row = 0
@@ -361,5 +372,5 @@ grid=True)
                 ax.grid()
                 ax.set_axisbelow(True)
 
-        fig.savefig(file_path)
-        plt.close()
+        writer(self._filename, manager.out, (fig, plt),
+               savefun=matplotlib_savefun)

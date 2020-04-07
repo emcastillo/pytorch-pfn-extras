@@ -8,6 +8,7 @@ from pytorch_pfn_extras.training import extension as extension_module
 from pytorch_pfn_extras.training import trigger as trigger_module
 from pytorch_pfn_extras.training import util as util_module
 from pytorch_pfn_extras.reporting import Reporter
+from pytorch_pfn_extras import writing
 
 
 # Select the best-resolution timer function
@@ -74,7 +75,8 @@ class _BaseExtensionsManager:
             optimizers,
             max_epochs,
             extensions,
-            out_dir='result',
+            out_dir,
+            writer,
             stop_trigger=None):
         if extensions is None:
             extensions = []
@@ -83,12 +85,13 @@ class _BaseExtensionsManager:
                 (max_epochs, 'epoch'))
         else:
             self._stop_trigger = stop_trigger
+        if writer is None:
+            writer = writing.SimpleWriter()
         # triggers are stateful, so we need to make a copy for internal use
         self._internal_stop_trigger = copy.deepcopy(self._stop_trigger)
         self.observation = {}
-        self._out = out_dir
-        if not os.path.exists(self.out):
-            os.makedirs(self.out)
+        self.out = out_dir
+        self.writer = writer
         self.reporter = Reporter()
 
         for name in models:
@@ -107,9 +110,8 @@ class _BaseExtensionsManager:
         for ext in extensions:
             self.extend(ext)
 
-    @property
-    def out(self):
-        return self._out
+        # Initialize the writer
+        self.writer.initialize(self.out)
 
     @property
     def elapsed_time(self):
@@ -304,6 +306,8 @@ class ExtensionsManager(_BaseExtensionsManager):
         stop_trigger (trigger object, optional) trigger that can be consulted
            to determine wether training has concluded. The default is an
            interval trigger set to `max_epochs`
+        writer (writing.Writer object): Writer that can be used by
+            extensions to write data to custom filesystems.
     """
 
     def __init__(
@@ -315,9 +319,11 @@ class ExtensionsManager(_BaseExtensionsManager):
             iters_per_epoch,
             extensions=None,
             out_dir='result',
-            stop_trigger=None):
+            stop_trigger=None,
+            writer=None):
         super().__init__(
-            models, optimizers, max_epochs, extensions, out_dir, stop_trigger)
+            models, optimizers, max_epochs, extensions,
+            out_dir, writer, stop_trigger)
         if not (isinstance(iters_per_epoch, int) and iters_per_epoch >= 1):
             raise ValueError(
                 'iters_per_epoch must be an integer >= 1 ({} given)'.format(
@@ -356,6 +362,8 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
         max_epochs (int): Number of epochs in the whole training loop.
         extensions (list or None): List of Extentions to be used.
         out_dir (str): Output directory (default: ``result``).
+        writer (writing.Writer object): Writer that can be used by
+            extensions to write data to custom filesystems.
     """
     def __init__(
             self,
@@ -365,13 +373,15 @@ class IgniteExtensionsManager(_BaseExtensionsManager):
             max_epochs,
             *,
             extensions=None,
-            out_dir='result'):
+            out_dir='result',
+            writer=None):
         import ignite
         if (util_module._get_ignite_version(ignite.__version__)
                 < util_module._get_ignite_version('0.3.0')):
             raise ImportError('Ignite version found {}. '
                               'Required is >=0.3.0'.format(ignite.__version__))
-        super().__init__(models, optimizers, max_epochs, extensions, out_dir)
+        super().__init__(
+            models, optimizers, max_epochs, extensions, out_dir, writer)
         self.engine = engine
         self._start_epoch = 0  # Used to correctly restore snapshots
         self.set_ignite_handlers()

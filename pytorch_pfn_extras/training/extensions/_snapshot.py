@@ -4,10 +4,9 @@ import torch
 import torch.distributed
 
 from pytorch_pfn_extras.training import extension
-from pytorch_pfn_extras.training.extensions import snapshot_writers
 
 
-def _find_snapshot_files(fmt, path):
+def _find_snapshot_files(fmt, path, fs):
     '''Only prefix and suffix match
 
     TODO(kuenishi): currently clean format string such as
@@ -30,17 +29,17 @@ def _find_snapshot_files(fmt, path):
     prefix = fmt.split('{')[0]
     suffix = fmt.split('}')[-1]
 
-    matched_files = (file for file in os.listdir(path)
+    matched_files = (file for file in fs.list(path)
                      if file.startswith(prefix) and file.endswith(suffix))
 
     def _prepend_mtime(f):
-        t = os.stat(os.path.join(path, f)).st_mtime
+        t = fs.stat(os.path.join(path, f)).st_mtime
         return (t, f)
 
     return sorted(_prepend_mtime(file) for file in matched_files)
 
 
-def _find_latest_snapshot(fmt, path):
+def _find_latest_snapshot(fmt, path, fs):
     """Finds the latest snapshots in a directory
 
     Args:
@@ -56,7 +55,7 @@ def _find_latest_snapshot(fmt, path):
         ``path``. If no such file found, it returns ``None``.
 
     """
-    snapshot_files = _find_snapshot_files(fmt, path)
+    snapshot_files = _find_snapshot_files(fmt, path, fs)
 
     if len(snapshot_files) > 0:
         _, filename = snapshot_files[-1]
@@ -65,7 +64,7 @@ def _find_latest_snapshot(fmt, path):
     return None
 
 
-def _find_stale_snapshots(fmt, path, n_retains):
+def _find_stale_snapshots(fmt, path, n_retains, fs):
     """Finds stale snapshots in a directory, retaining several files
 
     Args:
@@ -84,7 +83,7 @@ def _find_stale_snapshots(fmt, path, n_retains):
         excluding newest ``n_retains`` files.
 
     """
-    snapshot_files = _find_snapshot_files(fmt, path)
+    snapshot_files = _find_snapshot_files(fmt, path, fs)
     num_remove = len(snapshot_files) - n_retains
     if num_remove > 0:
         for _, filename in snapshot_files[:num_remove]:
@@ -129,7 +128,7 @@ n_retains=-1, autoload=False)
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~pytorch_pfn_extras.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_pfn_extras.writing.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case training
@@ -181,12 +180,6 @@ def snapshot(savefun=None,
     The default priority is -100, which is lower than that of most
     built-in extensions.
 
-    .. note::
-       This extension first writes the serialized object to a temporary file
-       and then rename it to the target file name. Thus, if the program stops
-       right before the renaming, the temporary file might be left in the
-       output directory.
-
     Args:
         savefun: Function to save the manager. It takes two arguments: the
             output file path and the manager object.
@@ -207,7 +200,7 @@ def snapshot(savefun=None,
             See below for the list of built-in writers.
             If ``savefun`` is other than ``None``, this argument must be
             ``None``. In that case, a
-            :class:`~pytorch_pfn_extras.training.extensions.snapshot_writers.SimpleWriter`
+            :class:`~pytorch_pfn_extras.writing.SimpleWriter`
             object instantiated with specified ``savefun`` argument will be
             used.
         snapshot_on_error (bool): Whether to take a snapshot in case training
@@ -244,7 +237,8 @@ def snapshot(savefun=None,
         asynchronous, hiding I/O overhead of snapshots.
 
         >>> from pytorch_pfn_extras.training import extensions
-        >>> writer = extensions.snapshot_writers.ProcessWriter()
+        >>> from pytorch_pfn_extras import writing
+        >>> writer = writing.ProcessWriter()
         >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
@@ -252,23 +246,19 @@ trigger=(1, 'epoch'))
         function as ``savefun`` argument of the writer.
 
         >>> from pytorch_pfn_extras.training import extensions
-        >>> writer = extensions.snapshot_writers.ProcessWriter(
+        >>> from pytorch_pfn_extras import writing
+        >>> writer = writing.ProcessWriter(
         ...     savefun=torch.save)
         >>> manager.extend(extensions.snapshot(writer=writer), \
 trigger=(1, 'epoch'))
 
     This is the list of built-in snapshot writers.
 
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-SimpleWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ThreadWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ProcessWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ThreadQueueWriter`
-        - :class:`pytorch_pfn_extras.training.extensions.snapshot_writers.\
-ProcessQueueWriter`
+        - :class:`pytorch_pfn_extras.writing.SimpleWriter`
+        - :class:`pytorch_pfn_extras.writing.ThreadWriter`
+        - :class:`pytorch_pfn_extras.writing.ProcessWriter`
+        - :class:`pytorch_pfn_extras.writing.ThreadQueueWriter`
+        - :class:`pytorch_pfn_extras.writing.ProcessQueueWriter`
 
     .. seealso::
 
@@ -278,19 +268,15 @@ ProcessQueueWriter`
         raise TypeError(
             'savefun and writer arguments cannot be specified together.')
 
-    if writer is None:
-        if savefun is None:
-            savefun = torch.save
-        writer = snapshot_writers.SimpleWriter(savefun=savefun)
     if saver_rank is None:
         return _Snapshot(
             target=target, condition=condition, writer=writer,
             filename=filename, snapshot_on_error=snapshot_on_error,
-            n_retains=n_retains, autoload=autoload)
+            n_retains=n_retains, autoload=autoload, savefun=savefun)
     return _DistributedSnapshot(
         target=target, condition=condition, writer=writer, filename=filename,
         snapshot_on_error=snapshot_on_error, n_retains=n_retains,
-        autoload=autoload, saver_rank=saver_rank)
+        autoload=autoload, saver_rank=saver_rank, savefun=savefun)
 
 
 def _always_true():
@@ -317,11 +303,10 @@ class _Snapshot(extension.Extension):
     def __init__(
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
-            snapshot_on_error=False, n_retains=-1, autoload=False):
+            snapshot_on_error=False, n_retains=-1, autoload=False,
+            savefun=None):
         if condition is None:
             condition = _always_true
-        if writer is None:
-            writer = snapshot_writers.SimpleWriter()
         self._target = target
         self.filename = filename
         self.condition = condition
@@ -329,22 +314,25 @@ class _Snapshot(extension.Extension):
         self._snapshot_on_error = snapshot_on_error
         self.n_retains = n_retains
         self.autoload = autoload
+        self._savefun = savefun
 
     def initialize(self, manager):
         target = manager if self._target is None else self._target
         outdir = manager.out
+        writer = manager.writer if self.writer is None else self.writer
+        self.writer = writer
         if self.autoload:
             # If ``autoload`` is on, this code scans the ``outdir``
             # for potential snapshot files by matching the file names
             # from ``filename`` format, picks up the latest one in
             # terms of mtime, and tries to load it it the target or
             # manager.
-            filename = _find_latest_snapshot(self.filename, outdir)
+            filename = _find_latest_snapshot(self.filename, outdir, writer.fs)
             if filename is None:
                 print('No snapshot file that matches {} was found'
                       .format(self.filename))
             else:
-                snapshot_file = os.path.join(outdir, filename)
+                snapshot_file = writer.fs.open(os.path.join(outdir, filename))
                 # As described above (at ``autoload`` option),
                 # snapshot files to be autoloaded must be saved by
                 # ``save_npz`` . In order to support general format,
@@ -354,7 +342,7 @@ class _Snapshot(extension.Extension):
                                    map_location=torch.device("cpu"))
                 target.load_state_dict(state)
 
-        if (hasattr(self.writer, '_add_cleanup_hook')
+        if (hasattr(writer, '_add_cleanup_hook')
                 and self.n_retains > 0
                 and isinstance(self.filename, str)):
             # This block sets a method to automatic cleanup of stale
@@ -365,11 +353,11 @@ class _Snapshot(extension.Extension):
             # injected here.
             def _cleanup():
                 files = _find_stale_snapshots(self.filename, outdir,
-                                              self.n_retains)
+                                              self.n_retains, writer.fs)
                 for file in files:
-                    os.remove(os.path.join(outdir, file))
+                    writer.fs.remove(os.path.join(outdir, file))
 
-            self.writer._add_cleanup_hook(_cleanup)
+            writer._add_cleanup_hook(_cleanup)
 
     def on_error(self, manager, exc, tb):
         super().on_error(manager, exc, tb)
@@ -382,6 +370,8 @@ class _Snapshot(extension.Extension):
 
     def _make_snapshot(self, manager):
         target = manager if self._target is None else self._target
+        writer = manager.writer if self.writer is None else self.writer
+        self.writer = writer
         # We need to get a dictionary with the sate here
         serialized_target = target.state_dict()
         filename = self.filename
@@ -390,7 +380,7 @@ class _Snapshot(extension.Extension):
         else:
             filename = filename.format(manager)
         outdir = manager.out
-        self.writer(filename, outdir, serialized_target)
+        writer(filename, outdir, serialized_target, savefun=self._savefun)
 
     def finalize(self):
         if hasattr(self.writer, 'finalize'):
@@ -418,10 +408,10 @@ class _DistributedSnapshot(_Snapshot):
             self, target=None, condition=None, writer=None,
             filename='snapshot_iter_{.updater.iteration}',
             snapshot_on_error=False, n_retains=-1, autoload=False,
-            saver_rank=0):
+            saver_rank=0, savefun=None):
         super().__init__(target, condition, writer, filename,
                          snapshot_on_error, n_retains,
-                         autoload)
+                         autoload, savefun)
         # To support distributed snapshots
         self._saver_rank = saver_rank
         self._size, self._rank, self._local_rank = _get_ranks_from_env()
