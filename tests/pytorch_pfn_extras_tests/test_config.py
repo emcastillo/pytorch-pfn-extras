@@ -9,7 +9,7 @@ def func_0(a, b, c=10):
 
 
 @customize_type(c='/foo/v0')
-def func_1(a, b):
+def func_1(a, b, c):
     return {'d': a * b, 'e': c}
 
 
@@ -75,8 +75,8 @@ class TestConfig(unittest.TestCase):
             'bar': [
                 Cls0(1, 2, 10),
                 Cls0(1, 2, 3),
-                Cls1(2, 13),
-                Cls1(2, 3),
+                Cls1(1, 2, 13),
+                Cls1(1, 2, 3),
             ],
             'baz': {
                 'v0': 2,
