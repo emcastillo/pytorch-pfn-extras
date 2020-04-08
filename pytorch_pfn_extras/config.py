@@ -21,7 +21,8 @@ class Config(object):
     def _eval(self, config_key, attr_key, trace):
         if (config_key, attr_key) in trace:
             raise RuntimeError('Circular dependency: {}'.format(
-                ' -> '.join(_dump_key(config_key, attr_key) for config_key, attr_key in trace)))
+                ' -> '.join(_dump_key(config_key, attr_key)
+                            for config_key, attr_key in trace)))
 
         if attr_key:
             trace = (*trace, (config_key, attr_key))
@@ -36,7 +37,8 @@ class Config(object):
         except (IndexError, KeyError):
             raise KeyError('{} does not exist: {}'.format(
                 _dump_key(config_key, attr_key),
-                ' -> '.join(_dump_key(config_key, attr_key) for config_key, attr_key in trace)))
+                ' -> '.join(_dump_key(config_key, attr_key)
+                            for config_key, attr_key in trace)))
 
         return obj
 
@@ -53,7 +55,8 @@ class Config(object):
         except (IndexError, KeyError):
             raise KeyError('{} does not exist: {}'.format(
                 _dump_key(config_key, ()),
-                ' -> '.join(_dump_key(config_key, attr_key) for config_key, attr_key in trace)))
+                ' -> '.join(_dump_key(config_key, attr_key)
+                            for config_key, attr_key in trace)))
 
         if isinstance(config, dict):
             if 'type' in config:
@@ -73,16 +76,21 @@ class Config(object):
                 self._cache[config_key] = type_(**kwargs)
             except Exception as e:
                 if len(e.args) > 0:
-                    e.args = ('{} (type_ = {}, kwargs = {})'.format(e.args[0], type_, reprlib.repr(kwargs)), *e.args[1:])
+                    e.args = ('{} (type_ = {}, kwargs = {})'.format(
+                        e.args[0], type_, reprlib.repr(kwargs)), *e.args[1:])
                 else:
-                    e.args = ('(type_ = {}, kwargs = {})'.format(type_, reprlib.repr(kwargs)),)
+                    e.args = ('(type_ = {}, kwargs = {})'.format(
+                        type_, reprlib.repr(kwargs)),)
                 raise e
 
         elif isinstance(config, list):
-            self._cache[config_key] = [self._eval_config((*config_key, i), trace) for i in range(len(config))]
+            self._cache[config_key] = [
+                self._eval_config((*config_key, i), trace)
+                for i in range(len(config))]
         else:
             if isinstance(config, str) and config.startswith('@'):
-                self._cache[config_key] = self._eval(*_parse_key(config[1:], config_key[:-1]), trace)
+                self._cache[config_key] = self._eval(
+                    *_parse_key(config[1:], config_key[:-1]), trace)
             else:
                 self._cache[config_key] = config
 
