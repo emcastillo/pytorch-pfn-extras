@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from pytorch_pfn_extras.config import Config
@@ -11,6 +12,11 @@ def func_0(a, b, c=10):
 @customize_type(c='/foo/v0')
 def func_1(a, b, c):
     return {'d': a * b, 'e': c}
+
+
+@customize_type(config='!/')
+def func_2(config):
+    return json.dumps(config)
 
 
 class Cls0(object):
@@ -85,6 +91,20 @@ class TestConfig(unittest.TestCase):
                 'v3': {'d': 2, 'e': 3},
             },
         })
+
+    def test_config_escape(self):
+        pre_eval_config = {
+            'foo': {
+                'v0': {'type': 'func_0', 'a': 1, 'b': 2},
+            },
+            'bar': {'type': 'func_2'},
+        }
+        config = Config(pre_eval_config, {'func_2': func_2})
+
+        self.assertEqual(config['!/foo'], {
+            'v0': {'type': 'func_0', 'a': 1, 'b': 2},
+        })
+        self.assertEqual(json.loads(config['/bar']), pre_eval_config)
 
     def test_config_with_cyclic(self):
         config = Config({'foo': '@/bar', 'bar': '@foo.d'})
