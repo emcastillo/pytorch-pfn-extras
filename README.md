@@ -32,6 +32,7 @@ This issue will be resolved once the library is released as an OSS.
 * [Reporting](docs/reporting.md)
 * [Lazy Modules](docs/lazy.md)
 * [Distributed Snapshot](docs/snapshot.md)
+* [Config System](docs/config.md)
 
 ## Examples
 
