@@ -19,13 +19,12 @@ class Config(object):
         return self._eval(*_parse_key(key, None), ())
 
     def _eval(self, config_key, attr_key, trace):
-        if (config_key, attr_key) in trace:
+        circular = (config_key, attr_key) in trace
+        trace = (*trace, (config_key, attr_key))
+        if circular:
             raise RuntimeError('Circular dependency: {}'.format(
                 ' -> '.join(_dump_key(config_key, attr_key)
                             for config_key, attr_key in trace)))
-
-        if attr_key:
-            trace = (*trace, (config_key, attr_key))
 
         obj = self._eval_config(config_key, trace)
         try:
@@ -45,8 +44,6 @@ class Config(object):
     def _eval_config(self, config_key, trace):
         if config_key in self._cache:
             return self._cache[config_key]
-
-        trace = (*trace, (config_key, ()))
 
         config = self._config
         try:
@@ -137,7 +134,7 @@ def _parse_k(k):
 
 
 def _dump_key(config_key, attr_key):
-    config_key = '/'.join(str(k) for k in config_key)
+    config_key = '/' + '/'.join(str(k) for k in config_key)
     attr_key = '.'.join(str(k) for k in attr_key)
 
     if attr_key:
