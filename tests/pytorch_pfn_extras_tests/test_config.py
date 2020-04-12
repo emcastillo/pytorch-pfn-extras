@@ -140,7 +140,17 @@ class TestConfig(unittest.TestCase):
             config['!/baz'], {'type': 'func_1', 'a': 1, 'b': 3})
         self.assertEqual(config['/baz'], {'d': 3, 'e': 13})
 
-    def test_config_with_cyclic(self):
+    def test_config_with_circular_dependency(self):
         config = Config({'foo': '@/bar', 'bar': '@foo.d'})
         with self.assertRaises(RuntimeError):
             config['/']
+
+    def test_config_with_circular_import(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with open(os.path.join(temp, 'foo.json'), mode='w') as f:
+                json.dump({'import': 'bar.json'}, f)
+            with open(os.path.join(temp, 'bar.json'), mode='w') as f:
+                json.dump([{'import': './foo.json'}], f)
+
+            with self.assertRaises(RuntimeError):
+                Config.load_path(os.path.join(temp, 'foo.json'))

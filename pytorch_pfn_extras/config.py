@@ -28,7 +28,7 @@ class Config(object):
 
     @classmethod
     def load_path(cls, path, types=None):
-        return cls(_load(path), types)
+        return cls(_load(path, ()), types)
 
     def _eval(self, config_key, attr_key, trace):
         if (config_key, attr_key) in trace:
@@ -176,7 +176,13 @@ def _dump_key(config_key, attr_key):
         return config_key
 
 
-def _load(path):
+def _load(path, trace):
+    path = os.path.normpath(path)
+    circular = path in trace
+    trace = (*trace, path)
+    if circular:
+        raise RuntimeError('Circular import: {}'.format(' -> '.join(trace)))
+
     _, ext = os.path.splitext(path)
     with open(path) as f:
         if ext == '.json':
@@ -187,20 +193,21 @@ def _load(path):
             config = yaml.safe_load(f)
         else:
             raise ValueError('{} is not supported'.format(ext))
-    return _expand_import(config, os.path.dirname(path))
+    return _expand_import(config, os.path.dirname(path), trace)
 
 
-def _expand_import(config, workdir):
+def _expand_import(config, workdir, trace):
     if isinstance(config, dict):
         if 'import' in config:
             path = config['import']
             if not os.path.isabs(path):
                 path = os.path.join(workdir, path)
             config = {
-                **_load(path),
+                **_load(path, trace),
                 **{k: v for k, v in config.items() if k != 'import'}}
-        return {k: _expand_import(v, workdir) for k, v in config.items()}
+        return {k: _expand_import(v, workdir, trace)
+                for k, v in config.items()}
     elif isinstance(config, list):
-        return [_expand_import(v, workdir) for v in config]
+        return [_expand_import(v, workdir, trace) for v in config]
     else:
         return config
