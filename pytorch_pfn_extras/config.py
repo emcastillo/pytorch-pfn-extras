@@ -26,6 +26,9 @@ class Config(object):
                 ' -> '.join(_dump_key(config_key, attr_key)
                             for config_key, attr_key in trace)))
 
+        if attr_key is None:
+            return self._get_config(config_key, trace)
+
         obj = self._eval_config(config_key, trace)
         try:
             for k in attr_key:
@@ -45,16 +48,7 @@ class Config(object):
         if config_key in self._cache:
             return self._cache[config_key]
 
-        config = self._config
-        try:
-            for k in config_key:
-                config = config[k]
-        except (IndexError, KeyError):
-            raise KeyError('{} does not exist: {}'.format(
-                _dump_key(config_key, ()),
-                ' -> '.join(_dump_key(config_key, attr_key)
-                            for config_key, attr_key in trace)))
-
+        config = self._get_config(config_key, trace)
         if isinstance(config, dict):
             if 'type' in config:
                 type_ = self._types[config['type']]
@@ -93,14 +87,31 @@ class Config(object):
 
         return self._cache[config_key]
 
+    def _get_config(self, config_key, trace):
+        config = self._config
+        try:
+            for k in config_key:
+                config = config[k]
+        except (IndexError, KeyError):
+            raise KeyError('{} does not exist: {}'.format(
+                _dump_key(config_key, ()),
+                ' -> '.join(_dump_key(config_key, attr_key)
+                            for config_key, attr_key in trace)))
+        return config
+
 
 def _parse_key(key, path):
+    if key.startswith('!'):
+        key = key[1:]
+        escape = True
+    else:
+        escape = False
+
     if key.startswith('/'):
         key = key[1:]
         rel = False
     else:
         rel = True
-    assert not rel or path is not None
 
     config_key = key.split('/')
     config_key[-1], *attr_key = config_key[-1].split('.')
@@ -109,7 +120,12 @@ def _parse_key(key, path):
     attr_key = tuple(_parse_k(k) for k in attr_key)
 
     if rel:
+        assert path is not None
         config_key = list(path) + config_key
+
+    if escape:
+        assert not attr_key
+        attr_key = None
 
     i = 0
     while i < len(config_key):
@@ -139,5 +155,7 @@ def _dump_key(config_key, attr_key):
 
     if attr_key:
         return config_key + '.' + attr_key
+    elif attr_key is None:
+        return '!' + config_key
     else:
         return config_key
