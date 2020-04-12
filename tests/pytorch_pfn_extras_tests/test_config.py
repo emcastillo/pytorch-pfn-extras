@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 import unittest
 
 from pytorch_pfn_extras.config import Config
@@ -43,13 +45,15 @@ class Cls1(object):
 
 class TestConfig(unittest.TestCase):
 
+    types = {
+        'func_0': func_0,
+        'func_1': func_1,
+        'func_2': func_2,
+        'cls_0': Cls0,
+        'cls_1': Cls1,
+    }
+
     def test_config(self):
-        types = {
-            'func_0': func_0,
-            'func_1': func_1,
-            'cls_0': Cls0,
-            'cls_1': Cls1,
-        }
         config = Config({
             'foo': {
                 'v0': {'type': 'func_0', 'a': 1, 'b': 2},
@@ -69,7 +73,7 @@ class TestConfig(unittest.TestCase):
                 'v2': '@/bar/3.d',
                 'v3': '@../foo/v3',
             }
-        }, types)
+        }, self.types)
 
         self.assertEqual(config['/'], {
             'foo': {
@@ -99,12 +103,42 @@ class TestConfig(unittest.TestCase):
             },
             'bar': {'type': 'func_2'},
         }
-        config = Config(pre_eval_config, {'func_2': func_2})
+        config = Config(pre_eval_config, self.types)
 
         self.assertEqual(config['!/foo'], {
             'v0': {'type': 'func_0', 'a': 1, 'b': 2},
         })
         self.assertEqual(json.loads(config['/bar']), pre_eval_config)
+
+    def test_config_load_path(self):
+        with tempfile.TemporaryDirectory() as temp0, \
+             tempfile.TemporaryDirectory() as temp1:
+            with open(os.path.join(temp0, 'foo.json'), mode='w') as f:
+                json.dump({
+                    'foo': {'v0': {'type': 'func_0', 'a': 1, 'b': 2}},
+                    'bar': {'import': os.path.join(temp1, 'bar.json')},
+                    'baz': {
+                        'import': 'baz.json',
+                        'b': 3,
+                    },
+                }, f)
+            with open(os.path.join(temp1, 'bar.json'), mode='w') as f:
+                json.dump({'type': 'func_0', 'a': 3, 'b': 4}, f)
+            with open(os.path.join(temp0, 'baz.json'), mode='w') as f:
+                json.dump({'type': 'func_1', 'a': 1, 'b': 2}, f)
+
+            config = Config.load_path(
+                os.path.join(temp0, 'foo.json'), self.types)
+
+        self.assertEqual(
+            config['!/foo'], {'v0': {'type': 'func_0', 'a': 1, 'b': 2}})
+        self.assertEqual(config['/foo'], {'v0': 13})
+        self.assertEqual(
+            config['!/bar'], {'type': 'func_0', 'a': 3, 'b': 4})
+        self.assertEqual(config['/bar'], 17)
+        self.assertEqual(
+            config['!/baz'], {'type': 'func_1', 'a': 1, 'b': 3})
+        self.assertEqual(config['/baz'], {'d': 3, 'e': 13})
 
     def test_config_with_cyclic(self):
         config = Config({'foo': '@/bar', 'bar': '@foo.d'})

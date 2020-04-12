@@ -1,4 +1,12 @@
+import json
+import os
 import reprlib
+
+try:
+    import yaml
+    _yaml_import_error = None
+except ImportError as e:
+    _yaml_import_error = e
 
 
 def customize_type(**default_kwargs):
@@ -17,6 +25,10 @@ class Config(object):
 
     def __getitem__(self, key):
         return self._eval(*_parse_key(key, None), ())
+
+    @classmethod
+    def load_path(cls, path, types=None):
+        return cls(_load(path), types)
 
     def _eval(self, config_key, attr_key, trace):
         if (config_key, attr_key) in trace:
@@ -162,3 +174,33 @@ def _dump_key(config_key, attr_key):
         return '!' + config_key
     else:
         return config_key
+
+
+def _load(path):
+    _, ext = os.path.splitext(path)
+    with open(path) as f:
+        if ext == '.json':
+            config = json.load(f)
+        elif ext in {'.yml', '.yaml'}:
+            if _yaml_import_error:
+                raise _yaml_import_error
+            config = yaml.safe_load(f)
+        else:
+            raise ValueError('{} is not supported'.format(ext))
+    return _expand_import(config, os.path.dirname(path))
+
+
+def _expand_import(config, workdir):
+    if isinstance(config, dict):
+        if 'import' in config:
+            path = config['import']
+            if not os.path.isabs(path):
+                path = os.path.join(workdir, path)
+            config = {
+                **_load(path),
+                **{k: v for k, v in config.items() if k != 'import'}}
+        return {k: _expand_import(v, workdir) for k, v in config.items()}
+    elif isinstance(config, list):
+        return [_expand_import(v, workdir) for v in config]
+    else:
+        return config
