@@ -14,7 +14,7 @@ def func_1(a, b, c):
     return {'d': a * b, 'e': c}
 
 
-@customize_type(config='/!')
+@customize_type(config='!/')
 def func_2(config):
     return json.dumps(config)
 
@@ -101,7 +101,7 @@ class TestConfig(unittest.TestCase):
         }
         config = Config(pre_eval_config, {'func_2': func_2})
 
-        self.assertEqual(config['/foo!'], {
+        self.assertEqual(config['!/foo'], {
             'v0': {'type': 'func_0', 'a': 1, 'b': 2},
         })
         self.assertEqual(json.loads(config['/bar']), pre_eval_config)

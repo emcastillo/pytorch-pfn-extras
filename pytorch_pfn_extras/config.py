@@ -104,17 +104,17 @@ class Config(object):
 
 
 def _parse_key(key, path):
+    if key.startswith('!'):
+        key = key[1:]
+        escape = True
+    else:
+        escape = False
+
     if key.startswith('/'):
         key = key[1:]
         rel = False
     else:
         rel = True
-
-    if key.endswith('!'):
-        key = key[:-1]
-        escape = True
-    else:
-        escape = False
 
     config_key = key.split('/')
     config_key[-1], *attr_key = config_key[-1].split('.')
@@ -159,6 +159,6 @@ def _dump_key(config_key, attr_key):
     if attr_key:
         return config_key + '.' + attr_key
     elif attr_key is None:
-        return config_key + '!'
+        return '!' + config_key
     else:
         return config_key
