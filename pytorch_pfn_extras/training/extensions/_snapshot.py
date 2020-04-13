@@ -340,7 +340,11 @@ class _Snapshot(extension.Extension):
                 # and loadfun.
                 state = torch.load(snapshot_file,
                                    map_location=torch.device("cpu"))
-                target.load_state_dict(state)
+                if type(target) is dict:
+                    for k in target:
+                        target[k].load_state_dict(state[k])
+                else:
+                    target.load_state_dict(state)
 
         if (hasattr(writer, '_add_cleanup_hook')
                 and self.n_retains > 0
@@ -373,7 +377,10 @@ class _Snapshot(extension.Extension):
         writer = manager.writer if self.writer is None else self.writer
         self.writer = writer
         # We need to get a dictionary with the sate here
-        serialized_target = target.state_dict()
+        if type(target) is dict:
+            serialized_target = {k: v.state_dict() for k, v in target.items()}
+        else:
+            serialized_target = target.state_dict()
         filename = self.filename
         if callable(filename):
             filename = filename(manager)

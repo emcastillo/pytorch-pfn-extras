@@ -16,16 +16,35 @@ from pytorch_pfn_extras.training.extensions._snapshot import (
 from pytorch_pfn_extras import writing
 
 
-def get_trainer_with_mock_updater(*, out_dir):
+def get_trainer_with_mock_updater(*, out_dir, state_to_load=None):
+    model_state_dict = {}
+    optimizer_state_dict = {}
+    models = {'main': _StateDictModel(state_dict=model_state_dict)}
+    optimizers = {'main': _StateDictObj(state_dict=optimizer_state_dict)}
     epochs = 10  # FIXME
-    model = torch.nn.Linear(128, 1)
-    optimizer = torch.optim.SGD(model.parameters(), lr=1.0)
-    optimizers = {'main': optimizer}
-    models = {'main': model}
     return training.ExtensionsManager(
         models, optimizers, epochs,
         iters_per_epoch=10,
         out_dir=out_dir)
+
+
+class _StateDictObj():
+    def __init__(self, *, state_dict=None):
+        super().__init__()
+        self.called_load_state_dict = 0
+        self._state_dict = state_dict
+
+    def state_dict(self):
+        return self._state_dict
+
+    def load_state_dict(self, state_dict):
+        self.called_load_state_dict += 1
+        self._state_dict = state_dict
+
+
+class _StateDictModel(_StateDictObj, torch.nn.Module):
+    def forward(self, *args):
+        pass
 
 
 def test_call():
@@ -70,6 +89,52 @@ def test_save_file(remover):
     snapshot(trainer)
 
     assert os.path.exists('myfile.dat')
+
+
+def test_multi_target(remover):
+    trainer = get_trainer_with_mock_updater(out_dir='.')
+    trainer._done = True
+    other_state_dict = {'test': True}
+    other = _StateDictObj(state_dict=other_state_dict)
+    w = ppe.writing.SimpleWriter()
+    target = {'trainer': trainer, 'other': other}
+    snapshot = extensions.snapshot_object(target, 'myfile.dat',
+                                          writer=w)
+    snapshot(trainer)
+
+    assert os.path.exists('myfile.dat')
+    # Load the snapshot and verify it
+    state = torch.load('myfile.dat')
+    new_trainer = get_trainer_with_mock_updater(out_dir='.')
+    new_other = _StateDictObj(state_dict={})
+    new_trainer.load_state_dict(state['trainer'])
+    new_other.load_state_dict(state['other'])
+    assert new_trainer.state_dict() == trainer.state_dict()
+    assert new_other.state_dict() == other_state_dict
+
+
+def test_multi_target_autoload(remover):
+    trainer = get_trainer_with_mock_updater(out_dir='.')
+    trainer._done = True
+    other_state_dict = {'test': True}
+    other = _StateDictObj(state_dict=other_state_dict)
+    w = ppe.writing.SimpleWriter()
+    target = {'trainer': trainer, 'other': other}
+    snapshot = extensions.snapshot_object(target, 'myfile.dat',
+                                          writer=w)
+    snapshot(trainer)
+
+    assert os.path.exists('myfile.dat')
+    new_trainer = get_trainer_with_mock_updater(out_dir='.')
+    new_other = _StateDictObj(state_dict={})
+
+    target = {'trainer': new_trainer, 'other': new_other}
+    snapshot2 = extensions.snapshot_object(target, 'myfile.dat',
+                                           autoload=True)
+    # Load the snapshot and verify it
+    snapshot2.initialize(new_trainer)
+    assert new_trainer.state_dict() == trainer.state_dict()
+    assert new_other.state_dict() == other_state_dict
 
 
 def test_clean_up_tempdir(remover):
@@ -247,7 +312,8 @@ def test_remove_stale_snapshots(path):
     expected.sort()
     assert expected == found
 
-    trainer2 = get_trainer_with_mock_updater(out_dir=path)
+    trainer2 = get_trainer_with_mock_updater(
+        out_dir=path, state_to_load=trainer.state_dict())
     snapshot2 = extensions.snapshot(filename=fmt, autoload=True)
     # Just making sure no error occurs
     snapshot2.initialize(trainer2)
