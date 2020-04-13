@@ -96,7 +96,7 @@ def test_multi_target(remover):
     trainer._done = True
     other_state_dict = {'test': True}
     other = _StateDictObj(state_dict=other_state_dict)
-    w = extensions.snapshot_writers.SimpleWriter()
+    w = ppe.writing.SimpleWriter()
     target = {'trainer': trainer, 'other': other}
     snapshot = extensions.snapshot_object(target, 'myfile.dat',
                                           writer=w)
@@ -118,7 +118,7 @@ def test_multi_target_autoload(remover):
     trainer._done = True
     other_state_dict = {'test': True}
     other = _StateDictObj(state_dict=other_state_dict)
-    w = extensions.snapshot_writers.SimpleWriter()
+    w = ppe.writing.SimpleWriter()
     target = {'trainer': trainer, 'other': other}
     snapshot = extensions.snapshot_object(target, 'myfile.dat',
                                           writer=w)
