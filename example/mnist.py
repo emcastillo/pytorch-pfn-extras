@@ -143,15 +143,13 @@ def main():
                                 'val/loss', 'val/acc']),
         extensions.snapshot(),
     ]
-    models = {'main': model}
-    optimizers = {'main': optimizer}
     # Custom stop triggers can be added to the manager and
     # their status accessed through `manager.stop_trigger`
     trigger = None
     # trigger = ppe.training.triggers.EarlyStoppingTrigger(
     #     check_trigger=(1, 'epoch'), monitor='val/loss')
     manager = ppe.training.ExtensionsManager(
-        models, optimizers, args.epochs,
+        model, optimizer, args.epochs,
         extensions=my_extensions,
         iters_per_epoch=len(train_loader),
         stop_trigger=trigger)

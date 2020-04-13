@@ -254,3 +254,25 @@ def test_ignite_extensions_manager_state_dict():
     assert new_model.called_load_state_dict == 1
     assert new_optimizer.called_load_state_dict == 1
     assert new_optimizer.called_load_state_dict == 1
+
+
+def test_extensions_manager_with_plain_model_and_optimizer():
+    model_state_dict = object()
+    optimizer_state_dict = object()
+    max_epochs = 5
+    iters_per_epoch = 4
+    manager = training.ExtensionsManager(
+        _StateDictModel(state_dict=model_state_dict),
+        _StateDictObj(state_dict=optimizer_state_dict),
+        max_epochs,
+        iters_per_epoch=iters_per_epoch,
+    )
+
+    state_dict = manager.state_dict()
+
+    assert state_dict == {
+        '_start_iteration': 0,
+        'models': {'main': model_state_dict},
+        'optimizers': {'main': optimizer_state_dict},
+        'extensions': {}
+    }
