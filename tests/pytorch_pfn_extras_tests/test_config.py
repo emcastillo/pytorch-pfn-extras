@@ -128,7 +128,7 @@ class TestConfig(unittest.TestCase):
                 ], f)
 
             config = Config.load_path(
-                os.path.join(temp0, 'foo.json'), self.types)
+                os.path.join(temp0, 'foo.json'), types=self.types)
 
         self.assertEqual(config['!/foo'],
                          {'v0': {'type': 'func_0', 'a': 1, 'b': 2}})

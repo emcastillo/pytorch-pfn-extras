@@ -2,12 +2,6 @@ import json
 import os
 import reprlib
 
-try:
-    import yaml
-    _yaml_import_error = None
-except ImportError as e:
-    _yaml_import_error = e
-
 
 def customize_type(**default_kwargs):
     def deco(type_):
@@ -27,8 +21,10 @@ class Config(object):
         return self._eval(*_parse_key(key, None), ())
 
     @classmethod
-    def load_path(cls, path, types=None):
-        return cls(_load(path, ()), types)
+    def load_path(cls, path, *, loader=None, types=None):
+        if loader is None:
+            loader = _json_loader
+        return cls(_load(path, loader, ()), types)
 
     def _eval(self, config_key, attr_key, trace):
         if (config_key, attr_key) in trace:
@@ -176,37 +172,33 @@ def _dump_key(config_key, attr_key):
         return config_key
 
 
-def _load(path, trace):
+def _load(path, loader, trace):
     path = os.path.normpath(path)
     circular = path in trace
     trace = (*trace, path)
     if circular:
         raise RuntimeError('Circular import: {}'.format(' -> '.join(trace)))
 
-    _, ext = os.path.splitext(path)
-    with open(path) as f:
-        if ext == '.json':
-            config = json.load(f)
-        elif ext in {'.yml', '.yaml'}:
-            if _yaml_import_error:
-                raise _yaml_import_error
-            config = yaml.safe_load(f)
-        else:
-            raise ValueError('{} is not supported'.format(ext))
-    return _expand_import(config, os.path.dirname(path), trace)
+    config = loader(path)
+    return _expand_import(config, os.path.dirname(path), loader, trace)
 
 
-def _expand_import(config, workdir, trace):
+def _expand_import(config, workdir, loader, trace):
     if isinstance(config, dict):
-        config = {k: _expand_import(v, workdir, trace)
+        config = {k: _expand_import(v, workdir, loader, trace)
                   for k, v in config.items()}
         if 'import' in config:
             path = config['import']
             if not os.path.isabs(path):
                 path = os.path.join(workdir, path)
-            config = _load(path, trace)
+            config = _load(path, loader, trace)
         return config
     elif isinstance(config, list):
-        return [_expand_import(v, workdir, trace) for v in config]
+        return [_expand_import(v, workdir, loader, trace) for v in config]
     else:
         return config
+
+
+def _json_loader(path):
+    with open(path) as f:
+        return json.load(f)
