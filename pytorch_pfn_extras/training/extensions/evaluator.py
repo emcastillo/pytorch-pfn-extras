@@ -86,8 +86,15 @@ class Evaluator(extension.Extension):
         self._targets = target
 
         self.eval_hook = eval_hook
-        self.eval_func = eval_func
+        self._eval_func = eval_func
         self._progress_bar = progress_bar
+
+    def eval_func(self, *args, **kwargs):
+        if self._eval_func:
+            func = self._eval_func
+        else:
+            func = self._targets['main']
+        return func(*args, **kwargs)
 
     def get_iterator(self, name):
         """Returns the iterator of the given name."""
@@ -157,7 +164,6 @@ class Evaluator(extension.Extension):
 
         """
         iterator = self._iterators['main']
-        eval_func = self.eval_func or self._targets['main']
 
         if self.eval_hook:
             self.eval_hook(self)
@@ -174,11 +180,11 @@ class Evaluator(extension.Extension):
                 observation = {}
                 with reporting.report_scope(observation):
                     if isinstance(batch, (tuple, list)):
-                        eval_func(*batch)
+                        self.eval_func(*batch)
                     elif isinstance(batch, dict):
-                        eval_func(**batch)
+                        self.eval_func(**batch)
                     else:
-                        eval_func(batch)
+                        self.eval_func(batch)
                 summary.add(observation)
 
                 if self._progress_bar:
