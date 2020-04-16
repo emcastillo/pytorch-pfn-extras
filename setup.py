@@ -5,7 +5,7 @@ setuptools.setup(
     name='pytorch-pfn-extras',
     description='Supplementary components to accelerate research and '
                 'development in PyTorch.',
-    version='0.1.2',
+    version='0.2.0',
     install_requires=['numpy', 'torch'],
     extras_require={'test': ['pytest']},
     packages=[
