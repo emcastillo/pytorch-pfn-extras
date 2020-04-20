@@ -188,7 +188,21 @@ def _expand_import(config, workdir, loader, trace):
             path = config['import']
             if not os.path.isabs(path):
                 path = os.path.join(workdir, path)
-            config = _load(path, loader, trace)
+            config_orig, config = config, _load(path, loader, trace)
+            for k, v in config_orig.items():
+                if k == 'import':
+                    continue
+                config_key, attr_key = _parse_key(k, None)
+                assert attr_key == ()
+
+                c = config
+                try:
+                    for k in config_key[:-1]:
+                        c = c[k]
+                    c[config_key[-1]] = v
+                except (IndexError, KeyError):
+                    raise KeyError('{} does not exist'.format(
+                        _dump_key(config_key, ())))
         return config
     elif isinstance(config, list):
         return [_expand_import(v, workdir, loader, trace) for v in config]
