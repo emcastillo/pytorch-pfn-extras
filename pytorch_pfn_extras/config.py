@@ -18,7 +18,7 @@ class Config(object):
         self._cache = {}
 
     def __getitem__(self, key):
-        return self._eval(*_parse_key(key, None), ())
+        return self._eval(*_parse_key(key, None)[:2], ())
 
     @classmethod
     def load_path(cls, path, *, loader=None, types=None):
@@ -69,7 +69,7 @@ class Config(object):
                     kwargs[k] = self._eval_config((*config_key, k), trace)
             for k, v in getattr(type_, '_custom_default_kwargs', {}).items():
                 if k not in kwargs:
-                    kwargs[k] = self._eval(*_parse_key(v, config_key), trace)
+                    kwargs[k] = self._eval(*_parse_key(v, config_key)[:2], trace)
 
             try:
                 self._cache[config_key] = type_(**kwargs)
@@ -89,7 +89,7 @@ class Config(object):
         else:
             if isinstance(config, str) and config.startswith('@'):
                 self._cache[config_key] = self._eval(
-                    *_parse_key(config[1:], config_key[:-1]), trace)
+                    *_parse_key(config[1:], config_key[:-1])[:2], trace)
             else:
                 self._cache[config_key] = config
 
@@ -127,13 +127,12 @@ def _parse_key(key, path):
     config_key = [_parse_k(k) for k in config_key]
     attr_key = tuple(_parse_k(k) for k in attr_key)
 
-    if rel:
-        assert path is not None
-        config_key = list(path) + config_key
-
     if escape:
         assert not attr_key
         attr_key = None
+
+    if rel:
+        config_key = list(path) + config_key
 
     i = 0
     while i < len(config_key):
@@ -147,7 +146,7 @@ def _parse_key(key, path):
         else:
             i += 1
 
-    return tuple(config_key), attr_key
+    return tuple(config_key), attr_key, rel
 
 
 def _parse_k(k):
@@ -192,8 +191,9 @@ def _expand_import(config, workdir, loader, trace):
             for k, v in config_orig.items():
                 if k == 'import':
                     continue
-                config_key, attr_key = _parse_key(k, None)
+                config_key, attr_key, rel = _parse_key(k, ())
                 assert attr_key == ()
+                assert rel
 
                 c = config
                 try:

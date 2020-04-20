@@ -119,8 +119,8 @@ class TestConfig(unittest.TestCase):
                     'bar': {'import': os.path.join(temp1, 'bar.json')},
                     'baz': {
                         'import': 'baz.json',
-                        '/0/b': 3,
-                        '/1/d': [1, 2],
+                        '0/b': 3,
+                        '1/d': [1, 2],
                     },
                 }, f)
             with open(os.path.join(temp1, 'bar.json'), mode='w') as f:
