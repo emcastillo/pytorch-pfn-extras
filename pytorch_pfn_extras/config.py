@@ -69,7 +69,8 @@ class Config(object):
                     kwargs[k] = self._eval_config((*config_key, k), trace)
             for k, v in getattr(type_, '_custom_default_kwargs', {}).items():
                 if k not in kwargs:
-                    kwargs[k] = self._eval(*_parse_key(v, config_key)[:2], trace)
+                    kwargs[k] = self._eval(
+                        *_parse_key(v, config_key)[:2], trace)
 
             try:
                 self._cache[config_key] = type_(**kwargs)
