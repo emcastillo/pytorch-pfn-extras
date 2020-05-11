@@ -274,7 +274,7 @@ class _BaseExtensionsManager:
             except AttributeError:
                 pass
 
-    def state_dict(self, *, transform_models=None):
+    def state_dict(self, *, transform_models=lambda n, x: x):
         """
         transform_models is a function that apply a transformation
         to a model.
@@ -290,11 +290,9 @@ class _BaseExtensionsManager:
         else:
             to_save['_start_iteration'] = 0
         # Save manager status ?
-        to_save['models'] = {}
-        for name, model in self._models.items():
-            if transform_models is not None:
-                model = transform_models(name, model)
-            to_save['models'][name] = model.state_dict()
+        to_save['models'] = {
+            name: transform_models(name, self._models[name]).state_dict()
+            for name in self._models}
         to_save['optimizers'] = {name: self._optimizers[name].state_dict()
                                  for name in self._optimizers}
         to_save['extensions'] = {name: self._extensions[name].state_dict()
