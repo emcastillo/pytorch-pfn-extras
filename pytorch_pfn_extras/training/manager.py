@@ -299,7 +299,7 @@ class _BaseExtensionsManager:
                                  for name in self._extensions}
         return to_save
 
-    def load_state_dict(self, to_load, *, transform_models=None):
+    def load_state_dict(self, to_load, *, transform_models=lambda n, x: x):
         """
         transform_models is a function that apply a transformation
         to a model.
@@ -315,8 +315,7 @@ class _BaseExtensionsManager:
         for name in self._models:
             # TODO(ecastill) map_loc when loading the model and DDP check
             self._models[name].load_state_dict(to_load['models'][name])
-            if transform_models is not None:
-                self._models[name] = transform_models(name, self._models[name])
+            self._models[name] = transform_models(name, self._models[name])
 
         for name in self._optimizers:
             self._optimizers[name].load_state_dict(to_load['optimizers'][name])
