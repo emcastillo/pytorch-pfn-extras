@@ -36,7 +36,7 @@ class TorchBackend(ppe.backend.Backend):
 
     def pre_validation(self, trainer, evaluator):
         model = evaluator.get_model("main")
-        model.val()
+        model.eval()
 
     def inference_step(self, inferencer, batch):
         model = inferencer.get_model("main")

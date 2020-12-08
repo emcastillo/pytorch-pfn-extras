@@ -138,7 +138,6 @@ if __name__ == "__main__":
     input = torch.randn((10,), requires_grad=True)
     target = torch.randn((20,))
     loss = model_with_loss_fn(input, target)
-    print(loss)
     loss.backward()
     print(input.grad)
 
