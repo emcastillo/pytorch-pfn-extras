@@ -18,6 +18,7 @@ class Trainer(ppe.engine._Engine):
         out_dir="result",
         stop_trigger=None,
         to_report_outputs=[],
+        backward_variable_names=None,
         writer=None,
         device_options=None,
     ):
@@ -36,6 +37,7 @@ class Trainer(ppe.engine._Engine):
         self.evaluator = evaluator
         self.val_loader = None
         self.to_report_outputs = to_report_outputs
+        self._backward_variable_names = backward_variable_names
 
     @property
     def epoch(self):
@@ -88,9 +90,10 @@ class Trainer(ppe.engine._Engine):
             for idx, x in enumerate(train_loader):
                 with self._manager.run_iteration(step_optimizers=["main"]):
                     if self._run_fn is None:
-                        outs = self._backend.train_step(self, idx, x)
+                        outs = self._backend.train_step(
+                            self, idx, x, self._backward_variable_names)
                     else:
-                        outs = self._run_fn(self.models, x)
+                        outs = self._run_fn(self.models, idx, x)
                     self._backend.process_train_step_outputs(self, outs)
                     if (
                         self.is_epoch_last_iter(idx)
