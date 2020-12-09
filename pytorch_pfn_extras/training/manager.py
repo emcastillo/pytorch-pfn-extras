@@ -266,10 +266,22 @@ class _BaseExtensionsManager:
         else:
             raise ValueError('extension %s not found' % name)
 
-    def run_extensions(self):
+    def run_extensions(self, to_run=None):
+        if to_run is None:
+            to_run = self.extensions
+            for name, entry in to_run:
+                if entry.trigger(self):
+                    entry.extension(self)
+        else:
+            for name, entry in to_run:
+                entry.extension(self)
+
+    def triggered_extensions(self):
+        extensions = []
         for name, entry in self.extensions:
             if entry.trigger(self):
-                entry.extension(self)
+                extensions.append((name, entry))
+        return extensions
 
     def _finalize_extensions(self):
         for _, entry in self.extensions:
@@ -385,7 +397,16 @@ class ExtensionsManager(_BaseExtensionsManager):
         if step_optimizers is not None:
             step_optimizers_names = step_optimizers
         self.observation = {}
+        self.extensions_to_run = []
         with self.reporter.scope(self.observation):
+            # In chainer, the iteration count was increased
+            # just before calling the extensions, we need
+            # to keep the semantics
+            self.iteration += 1
+            # We need to determine which extensions will
+            # be executed so that state can be retrieved if needed
+            self.extensions_to_run = self.triggered_extensions()
+            self.iteration -= 1
             try:
                 for name in step_optimizers_names:
                     self._optimizers[name].zero_grad()
@@ -393,11 +414,8 @@ class ExtensionsManager(_BaseExtensionsManager):
                 for name in step_optimizers_names:
                     self._optimizers[name].step()
             finally:
-                # In chainer, the iteration count was increased
-                # just before calling the extensions, we need
-                # to keep the semantics
                 self.iteration += 1
-                self.run_extensions()
+                self.run_extensions(to_run=self.extensions_to_run)
 
         if self._internal_stop_trigger(self):
             self._finalize_extensions()
