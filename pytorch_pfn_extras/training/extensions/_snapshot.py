@@ -316,6 +316,7 @@ class _Snapshot(extension.Extension):
     """
     trigger = 1, 'epoch'
     priority = extension.PRIORITY_SNAPSHOT
+    needs_model_state = True
 
     def __init__(
             self, target=None, condition=None, writer=None,
@@ -424,9 +425,6 @@ class _Snapshot(extension.Extension):
     def finalize(self):
         if hasattr(self.writer, 'finalize'):
             self.writer.finalize()
-
-    def needs_model_state(self):
-        return True
 
 
 class _DistributedSnapshot(_Snapshot):
