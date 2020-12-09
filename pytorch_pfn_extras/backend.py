@@ -17,7 +17,7 @@ class Backend:
     def pre_train_step(self, trainer):
         pass
 
-    def train_step(self, trainer, batch_idx, batch):
+    def train_step(self, trainer, batch_idx, batch, to_bwd_names):
         pass
 
     def pre_validation(self, trainer, evaluator):

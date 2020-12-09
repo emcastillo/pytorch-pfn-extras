@@ -29,12 +29,11 @@ class TorchBackend(ppe.backend.Backend):
         model = trainer.get_model("main")
         model.train()
 
-    def train_step(self, trainer, batch_idx, batch):
+    def train_step(self, trainer, batch_idx, batch, to_bwd_names):
         # Currently using a single model,
         # Rethink this for GAN case?
         model = trainer.get_model("main")
         outs = model(**_convert(self._device, batch))
-        to_bwd_names = trainer.get_backward_variable_names
 
         if to_bwd_names is None:
             for k, v in outs.items():
