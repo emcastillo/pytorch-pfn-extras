@@ -425,6 +425,9 @@ class _Snapshot(extension.Extension):
         if hasattr(self.writer, 'finalize'):
             self.writer.finalize()
 
+    def needs_model_state(self):
+        return True
+
 
 class _DistributedSnapshot(_Snapshot):
     """Trainer extension to take snapshots.

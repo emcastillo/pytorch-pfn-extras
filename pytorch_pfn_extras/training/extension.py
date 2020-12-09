@@ -113,6 +113,15 @@ class Extension:
         """
         pass
 
+    def needs_model_state(self):
+        """Notify that this extension will access to the model state.
+
+        In some devices /we need to know if an extension will need
+        model internal information so we can prepare it before the
+        actual extension runs
+        """
+        return False
+
     def state_dict(self):
         """Serializes the extension state.
 
