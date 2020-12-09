@@ -1,4 +1,12 @@
-from pytorch_pfn_extras.training.triggers import interval_trigger
+class Trigger:
+    """Base class for triggers."""
+    def will_fire(self, manager):
+        """Flags if the trigger will fire at the current iteration
+
+        This must not alter the trigger state
+
+        """
+        return 'maybe'
 
 
 def get_trigger(trigger):
@@ -31,6 +39,8 @@ def get_trigger(trigger):
         object made from ``trigger``.
 
     """
+    from pytorch_pfn_extras.training.triggers import interval_trigger
+
     if callable(trigger):
         return trigger
     elif trigger is None:

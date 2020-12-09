@@ -1,4 +1,7 @@
-class ManualScheduleTrigger:
+from pytorch_pfn_extras.training import trigger_util
+
+
+class ManualScheduleTrigger(trigger_util.Trigger):
 
     """Trigger invoked at specified point(s) of iterations or epochs.
 
@@ -105,3 +108,32 @@ class ManualScheduleTrigger:
         self._previous_iteration = to_load['_previous_iteration']
         self._previous_epoch_detail = to_load['_previous_epoch_detail']
         self.finished = to_load['finished']
+
+    def will_fire(self, manager):
+        iteration = manager.iteration + 1
+
+        if self.unit == 'epoch':
+            epoch_detail = manager.epoch_detail_at_iteration(iteration)
+            previous_epoch_detail = self._previous_epoch_detail
+
+            # if previous_epoch_detail is invalid value,
+            # use the value of manager.
+            if previous_epoch_detail < 0:
+                previous_epoch_detail = manager.previous_epoch_detail
+
+            fire = any(
+                previous_epoch_detail < p <= epoch_detail
+                for p in self.points)
+
+        else:
+            previous_iteration = self._previous_iteration
+
+            # if previous_iteration is invalid value,
+            # guess it from current iteration.
+            if previous_iteration < 0:
+                previous_iteration = iteration - 1
+
+            fire = any(
+                previous_iteration < p <= iteration
+                for p in self.points)
+        return 'yes' if fire else 'no'

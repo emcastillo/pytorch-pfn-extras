@@ -1,4 +1,7 @@
-class IntervalTrigger:
+from pytorch_pfn_extras.training import trigger_util
+
+
+class IntervalTrigger(trigger_util.Trigger):
 
     """Trigger based on a fixed interval.
 
@@ -103,3 +106,28 @@ class IntervalTrigger:
         return '{}({}, \'{}\')'.format(
             self.__class__.__name__, self.period, self.unit
         )
+
+    def will_fire(self, manager):
+        iteration = manager.iteration + 1
+        if self.unit == 'epoch':
+            epoch_detail = manager.epoch_detail_at_iteration(iteration)
+            previous_epoch_detail = self._previous_epoch_detail
+
+            # if previous_epoch_detail is invalid value,
+            # use the value of manager.
+            if previous_epoch_detail < 0:
+                previous_epoch_detail = manager.previous_epoch_detail
+
+            fire = previous_epoch_detail // self.period != \
+                epoch_detail // self.period
+        else:
+            previous_iteration = self._previous_iteration
+
+            # if previous_iteration is invalid value,
+            # guess it from current iteration.
+            if previous_iteration < 0:
+                previous_iteration = iteration - 1
+
+            fire = previous_iteration // self.period != \
+                iteration // self.period
+        return 'yes' if fire else 'no'

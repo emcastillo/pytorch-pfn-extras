@@ -1,4 +1,7 @@
-class OnceTrigger:
+from pytorch_pfn_extras.training import trigger_util
+
+
+class OnceTrigger(trigger_util.Trigger):
 
     """Trigger based on the starting point of the iteration.
 
@@ -37,3 +40,6 @@ class OnceTrigger:
 
     def load_state_dict(self, to_load):
         self._flag_first = to_load['_flag_first']
+
+    def will_fire(self, manager):
+        return not (self._flag_first or self._flag_resumed)
