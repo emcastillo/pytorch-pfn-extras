@@ -215,11 +215,13 @@ class Writer:
             prefix = 'tmp_{}'.format(filename)
             tmppath = os.path.join(out_dir, prefix)
             make_backup = self.fs.exists(dest)
+
+            with self.fs.open(tmppath, 'wb') as f:
+                savefun(target, f, **savefun_kwargs)
+            # HDFS does not support overwrite
             if make_backup:
                 bak = '{}.bak'.format(dest)
                 self.fs.rename(dest, bak)
-            with self.fs.open(tmppath, 'wb') as f:
-                savefun(target, f, **savefun_kwargs)
             self.fs.rename(tmppath, dest)
             if make_backup:
                 self.fs.remove(bak)
